@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import ClipList from "./components/ClipList";
 import JobStatusPanel from "./components/JobStatus";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -15,8 +16,30 @@ export default function HomePage() {
     isSubmitting,
     isPolling,
     isBusy,
+    isRestoring,
+    resultsFocusToken,
     submit,
   } = useVideoJob();
+
+  const resultsRef = useRef<HTMLElement | null>(null);
+  const handledFocusToken = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!resultsFocusToken) return;
+    if (handledFocusToken.current === resultsFocusToken) return;
+    if (job?.status !== "completed") return;
+
+    handledFocusToken.current = resultsFocusToken;
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [resultsFocusToken, job?.status]);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -53,10 +76,11 @@ export default function HomePage() {
           lastUpdated={lastUpdated}
           isPolling={isPolling}
           connectionWarning={connectionWarning}
+          isRestoring={isRestoring}
         />
 
         {job?.status === "completed" ? (
-          <ClipList paths={job.output_clip_paths} />
+          <ClipList ref={resultsRef} paths={job.output_clip_paths} />
         ) : null}
       </div>
     </main>

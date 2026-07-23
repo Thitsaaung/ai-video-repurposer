@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
+import AppToaster from "./components/AppToaster";
 import "./globals.css";
 
 const display = Fraunces({
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${display.variable} ${sans.variable} antialiased`}>
         {children}
+        <AppToaster />
       </body>
     </html>
   );
