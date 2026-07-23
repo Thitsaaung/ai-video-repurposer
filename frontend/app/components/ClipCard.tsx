@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import Card from "./Card";
 import { downloadClip, getClipMediaUrl } from "../lib/api";
 import { clipBasename, clipRelativePath } from "../lib/clipPaths";
+import { notify } from "../lib/notify";
 
 type ClipCardProps = {
   path: string;
@@ -30,14 +30,13 @@ export default function ClipCard({
     if (isDownloading) return;
     setDownloadError(null);
     setIsDownloading(true);
-    toast.message("Download started…");
+    notify.downloadStarted();
     try {
       await downloadClip(path);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Download failed";
       setDownloadError(message);
-      toast.error(message);
     } finally {
       setIsDownloading(false);
     }

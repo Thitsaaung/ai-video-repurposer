@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { getJob, submitVideo } from "@/app/lib/api";
 import { POLL_INTERVAL_MS } from "@/app/lib/config";
 import {
@@ -13,6 +12,17 @@ import { isTerminalStatus, type Job } from "@/types/job";
 
 const MAX_POLL_FAILURES = 3;
 
+/** One-shot lifecycle signals for the page to turn into UI side effects. */
+export type JobNotice =
+  | { id: number; type: "submitted" }
+  | { id: number; type: "completed"; clipCount: number }
+  | { id: number; type: "connection_retry" };
+
+type JobNoticeInput =
+  | { type: "submitted" }
+  | { type: "completed"; clipCount: number }
+  | { type: "connection_retry" };
+
 export type UseVideoJobResult = {
   job: Job | null;
   jobId: string | null;
@@ -23,8 +33,7 @@ export type UseVideoJobResult = {
   isPolling: boolean;
   isBusy: boolean;
   isRestoring: boolean;
-  /** Changes when a job newly reaches completed — drives scroll/focus once. */
-  resultsFocusToken: string | null;
+  notice: JobNotice | null;
   submit: (url: string) => Promise<void>;
 };
 
@@ -39,14 +48,18 @@ export function useVideoJob(): UseVideoJobResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const [shouldPoll, setShouldPoll] = useState(false);
-  const [resultsFocusToken, setResultsFocusToken] = useState<string | null>(
-    null,
-  );
+  const [notice, setNotice] = useState<JobNotice | null>(null);
   const submittingLock = useRef(false);
   const pollFailures = useRef(0);
   const previousStatus = useRef<string | null>(null);
   const warnedConnection = useRef(false);
   const restoreStarted = useRef(false);
+  const noticeId = useRef(0);
+
+  const emitNotice = useCallback((next: JobNoticeInput) => {
+    noticeId.current += 1;
+    setNotice({ ...next, id: noticeId.current });
+  }, []);
 
   const touchUpdated = useCallback(() => {
     setLastUpdated(new Date().toISOString());
@@ -65,16 +78,13 @@ export function useVideoJob(): UseVideoJobResult {
         prev !== null &&
         prev !== "completed"
       ) {
-        const count = (next.output_clip_paths ?? []).length;
-        toast.success(
-          count === 1
-            ? "Job completed — 1 clip ready."
-            : `Job completed — ${count} clips ready.`,
-        );
-        setResultsFocusToken(`${next.job_id}:${Date.now()}`);
+        emitNotice({
+          type: "completed",
+          clipCount: (next.output_clip_paths ?? []).length,
+        });
       }
     },
-    [touchUpdated],
+    [emitNotice, touchUpdated],
   );
 
   // Restore active job from localStorage after refresh.
@@ -103,10 +113,10 @@ export function useVideoJob(): UseVideoJobResult {
       } catch (err) {
         if (cancelled) return;
         clearActiveJobId();
-        const message =
-          err instanceof Error ? err.message : "Failed to restore job";
-        setError(message);
-        toast.error(message);
+        // Hard failure: inline alert only (no toast duplicate).
+        setError(
+          err instanceof Error ? err.message : "Failed to restore job",
+        );
       } finally {
         if (!cancelled) setIsRestoring(false);
       }
@@ -139,20 +149,19 @@ export function useVideoJob(): UseVideoJobResult {
         pollFailures.current += 1;
         const message =
           err instanceof Error ? err.message : "Failed to fetch job";
-        const warning = `${message} (retry ${pollFailures.current}/${MAX_POLL_FAILURES})`;
-        setConnectionWarning(warning);
+        setConnectionWarning(
+          `${message} (retry ${pollFailures.current}/${MAX_POLL_FAILURES})`,
+        );
 
         if (!warnedConnection.current) {
           warnedConnection.current = true;
-          toast.warning("Connection issue while checking job status. Retrying…");
+          emitNotice({ type: "connection_retry" });
         }
 
         if (pollFailures.current >= MAX_POLL_FAILURES) {
+          // Hard failure: inline alert only (no toast duplicate).
           setError(
             "Lost connection to the API while checking job status. Refresh and try again.",
-          );
-          toast.error(
-            "Lost connection while checking job status. Refresh and try again.",
           );
           setShouldPoll(false);
         }
@@ -168,7 +177,7 @@ export function useVideoJob(): UseVideoJobResult {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [jobId, shouldPoll, applyJob]);
+  }, [jobId, shouldPoll, applyJob, emitNotice]);
 
   const submit = useCallback(
     async (url: string) => {
@@ -193,29 +202,27 @@ export function useVideoJob(): UseVideoJobResult {
         setJobId(created.job_id);
         previousStatus.current = created.status;
         touchUpdated();
-        toast.success("Job submitted — analyzing your video…");
+
         if (!isTerminalStatus(created.status)) {
+          emitNotice({ type: "submitted" });
           setShouldPoll(true);
         } else if (created.status === "completed") {
-          const count = (created.output_clip_paths ?? []).length;
-          toast.success(
-            count === 1
-              ? "Job completed — 1 clip ready."
-              : `Job completed — ${count} clips ready.`,
-          );
-          setResultsFocusToken(`${created.job_id}:${Date.now()}`);
+          emitNotice({
+            type: "completed",
+            clipCount: (created.output_clip_paths ?? []).length,
+          });
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to submit video";
-        setError(message);
-        toast.error(message);
+        // Hard failure: inline alert only (no toast duplicate).
+        setError(
+          err instanceof Error ? err.message : "Failed to submit video",
+        );
       } finally {
         submittingLock.current = false;
         setIsSubmitting(false);
       }
     },
-    [touchUpdated],
+    [emitNotice, touchUpdated],
   );
 
   const isPolling = shouldPoll;
@@ -231,7 +238,7 @@ export function useVideoJob(): UseVideoJobResult {
     isPolling,
     isBusy,
     isRestoring,
-    resultsFocusToken,
+    notice,
     submit,
   };
 }

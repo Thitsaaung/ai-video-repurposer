@@ -11,9 +11,30 @@ The local pipeline:
 5. Validates clips (15–60s, bounds, overlap, top-N)
 6. Cuts each clip with **FFmpeg**: trim → center-crop **9:16** → burn-in captions → MP4
 
+## 📸 Screenshots
+
+### Home Page
+![Home Screen](docs/screenshot-home.png)
+
 **Primary entry point:** `services/engine.py`
 
-> FastAPI / Next.js / Supabase SaaS layers are planned but not built yet. This repo is the offline processing engine.
+## Architecture
+
+Frontend
+- Next.js 15
+
+Backend
+- FastAPI
+
+Processing Pipeline
+- yt-dlp
+- Whisper
+- AI Curation
+- FFmpeg
+
+Deployment
+- Railway (planned)
+- Vercel (planned)
 
 ---
 
@@ -227,8 +248,16 @@ See [`project_spec.md`](project_spec.md) for module responsibilities, JSON contr
 
 ✅ MP4 export
 
-🚧 FastAPI API
+✅ FastAPI Backend
 
-🚧 Next.js frontend
+✅ Next.js Frontend
+
+🚧 Railway Deployment
+
+🚧 Vercel Deployment
+
+🚧 Authentication
+
+🚧 Database
 
 🚧 Supabase integration

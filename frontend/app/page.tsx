@@ -6,6 +6,7 @@ import JobStatusPanel from "./components/JobStatus";
 import LoadingSpinner from "./components/LoadingSpinner";
 import VideoForm from "./components/VideoForm";
 import { useVideoJob } from "./hooks/useVideoJob";
+import { notify } from "./lib/notify";
 
 export default function HomePage() {
   const {
@@ -17,29 +18,48 @@ export default function HomePage() {
     isPolling,
     isBusy,
     isRestoring,
-    resultsFocusToken,
+    notice,
     submit,
   } = useVideoJob();
 
   const resultsRef = useRef<HTMLElement | null>(null);
-  const handledFocusToken = useRef<string | null>(null);
+  const handledNoticeId = useRef<number | null>(null);
 
+  // Page owns notification + scroll/focus side effects from lifecycle notices.
   useEffect(() => {
-    if (!resultsFocusToken) return;
-    if (handledFocusToken.current === resultsFocusToken) return;
-    if (job?.status !== "completed") return;
+    if (!notice) return;
+    if (handledNoticeId.current === notice.id) return;
+    handledNoticeId.current = notice.id;
 
-    handledFocusToken.current = resultsFocusToken;
+    if (notice.type === "submitted") {
+      notify.jobSubmitted();
+      return;
+    }
 
-    const frame = window.requestAnimationFrame(() => {
-      const target = resultsRef.current;
-      if (!target) return;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      target.focus({ preventScroll: true });
-    });
+    if (notice.type === "connection_retry") {
+      notify.connectionRetry();
+      return;
+    }
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [resultsFocusToken, job?.status]);
+    if (notice.type === "completed") {
+      notify.jobCompleted(notice.clipCount);
+
+      const frame = window.requestAnimationFrame(() => {
+        const target = resultsRef.current;
+        if (!target) return;
+        const prefersReducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        target.scrollIntoView({
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+          block: "start",
+        });
+        target.focus({ preventScroll: true });
+      });
+
+      return () => window.cancelAnimationFrame(frame);
+    }
+  }, [notice]);
 
   return (
     <main className="relative min-h-screen overflow-hidden">

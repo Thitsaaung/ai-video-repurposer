@@ -111,7 +111,7 @@ export default function JobStatusPanel({
         {isActive ? (
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
             <dt className="w-28 shrink-0 text-[var(--muted)]">Elapsed</dt>
-            <dd className="font-mono text-[var(--ink)]" aria-live="polite">
+            <dd className="font-mono text-[var(--ink)]">
               {formatElapsed(elapsedSeconds)}
             </dd>
           </div>
@@ -138,7 +138,9 @@ export default function JobStatusPanel({
         >
           <p className="font-medium">Analyzing your video…</p>
           <p className="mt-1 text-[var(--muted)]">
-            This usually takes 2–5 minutes.
+            {elapsedSeconds >= 5 * 60
+              ? "Still working — larger videos can take longer."
+              : "This usually takes 2–5 minutes."}
           </p>
         </div>
       ) : null}
