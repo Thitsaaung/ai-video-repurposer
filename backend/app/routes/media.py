@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-router = APIRouter(prefix="/media", tags=["media"])
+from app.core.config import get_settings
 
-# backend/app/routes/media.py → repo root
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_OUTPUT_CLIPS_DIR = (_PROJECT_ROOT / "output_clips").resolve()
-_OUTPUT_CLIPS_DIR.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/media", tags=["media"])
 
 
 def _resolve_clip_in_output_dir(filename: str) -> Path:
@@ -21,11 +21,11 @@ def _resolve_clip_in_output_dir(filename: str) -> Path:
 
     Rejects path traversal (``..``, absolute paths, nested segments).
     """
+    output_dir = get_settings().output_clips_dir.resolve()
     raw = (filename or "").strip()
     if not raw:
         raise HTTPException(status_code=400, detail="Filename is required")
 
-    # Disallow any directory separators in the request value.
     if "/" in raw or "\\" in raw:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
@@ -33,17 +33,14 @@ def _resolve_clip_in_output_dir(filename: str) -> Path:
     if safe_name != raw or safe_name in {".", ".."} or not safe_name:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    candidate = (_OUTPUT_CLIPS_DIR / safe_name).resolve()
+    candidate = (output_dir / safe_name).resolve()
     try:
-        candidate.relative_to(_OUTPUT_CLIPS_DIR)
+        candidate.relative_to(output_dir)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid filename",
-        ) from exc
+        raise HTTPException(status_code=400, detail="Invalid filename") from exc
 
     if not candidate.is_file():
-        raise HTTPException(status_code=404, detail=f"Clip not found: {safe_name}")
+        raise HTTPException(status_code=404, detail="Clip not found")
 
     return candidate
 
@@ -56,6 +53,7 @@ async def download_clip(filename: str) -> FileResponse:
     Only files that exist under the project ``output_clips/`` directory.
     """
     clip_path = _resolve_clip_in_output_dir(filename)
+    logger.info("Download clip filename=%s", clip_path.name)
     return FileResponse(
         path=clip_path,
         media_type="video/mp4",

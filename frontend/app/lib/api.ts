@@ -2,23 +2,58 @@
 
 import type { Job, ProcessVideoResponse } from "@/types/job";
 import { clipBasename } from "./clipPaths";
+import { API_BASE } from "./config";
 
-export const API_BASE = "http://127.0.0.1:8000";
+export { API_BASE };
+
+function friendlyNetworkError(err: unknown): Error {
+  if (err instanceof TypeError) {
+    return new Error(
+      "Cannot reach the API. Is the FastAPI server running on the configured API base?",
+    );
+  }
+  if (err instanceof Error) return err;
+  return new Error("Unexpected network error");
+}
 
 async function parseError(response: Response): Promise<string> {
   try {
     const data: unknown = await response.json();
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "detail" in data &&
-      typeof (data as { detail: unknown }).detail === "string"
-    ) {
-      return (data as { detail: string }).detail;
+    if (typeof data !== "object" || data === null || !("detail" in data)) {
+      return response.statusText || `HTTP ${response.status}`;
     }
-    return JSON.stringify(data);
+
+    const detail = (data as { detail: unknown }).detail;
+    if (typeof detail === "string") return detail;
+
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            "msg" in item &&
+            typeof (item as { msg: unknown }).msg === "string"
+          ) {
+            return (item as { msg: string }).msg;
+          }
+          return null;
+        })
+        .filter((msg): msg is string => Boolean(msg));
+      if (messages.length > 0) return messages.join("; ");
+    }
+
+    return JSON.stringify(detail);
   } catch {
     return response.statusText || `HTTP ${response.status}`;
+  }
+}
+
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err) {
+    throw friendlyNetworkError(err);
   }
 }
 
@@ -40,7 +75,7 @@ export function getClipDownloadUrl(filePathOrName: string): string {
  */
 export async function downloadClip(filePathOrName: string): Promise<void> {
   const filename = clipBasename(filePathOrName);
-  const response = await fetch(getClipDownloadUrl(filename));
+  const response = await apiFetch(getClipDownloadUrl(filename));
 
   if (!response.ok) {
     throw new Error(await parseError(response));
@@ -64,7 +99,7 @@ export async function downloadClip(filePathOrName: string): Promise<void> {
 
 /** POST /api/process-video — enqueue a YouTube URL for processing. */
 export async function submitVideo(url: string): Promise<ProcessVideoResponse> {
-  const response = await fetch(`${API_BASE}/api/process-video`, {
+  const response = await apiFetch(`${API_BASE}/api/process-video`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
@@ -79,7 +114,7 @@ export async function submitVideo(url: string): Promise<ProcessVideoResponse> {
 
 /** GET /api/jobs/{jobId} — fetch current job state. */
 export async function getJob(jobId: string): Promise<Job> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`,
   );
 

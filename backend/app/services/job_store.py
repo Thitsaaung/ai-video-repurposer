@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import logging
+import threading
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from app.core.enums import JobStatus
+
+logger = logging.getLogger(__name__)
+
 # job_id → job dict. Cleared when the process restarts.
 _jobs: dict[str, dict[str, Any]] = {}
+_lock = threading.RLock()
 
 
 def create_job(url: str) -> dict[str, Any]:
@@ -15,7 +22,7 @@ def create_job(url: str) -> dict[str, Any]:
     job_id = str(uuid4())
     job: dict[str, Any] = {
         "job_id": job_id,
-        "status": "queued",
+        "status": JobStatus.QUEUED.value,
         "url": url,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "video_path": None,
@@ -23,14 +30,17 @@ def create_job(url: str) -> dict[str, Any]:
         "output_clip_paths": None,
         "error": None,
     }
-    _jobs[job_id] = job
-    return dict(job)
+    with _lock:
+        _jobs[job_id] = job
+        logger.info("Created job_id=%s status=%s", job_id, JobStatus.QUEUED.value)
+        return dict(job)
 
 
 def get_job(job_id: str) -> dict[str, Any] | None:
     """Return a copy of the job, or ``None`` if unknown."""
-    job = _jobs.get(job_id)
-    return dict(job) if job is not None else None
+    with _lock:
+        job = _jobs.get(job_id)
+        return dict(job) if job is not None else None
 
 
 def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
@@ -40,27 +50,39 @@ def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
     Allowed extras: ``status``, ``video_path``, ``curated_json_path``,
     ``output_clip_paths``, ``error``. Returns updated copy or ``None``.
     """
-    job = _jobs.get(job_id)
-    if job is None:
-        return None
+    with _lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
 
-    allowed = {
-        "status",
-        "video_path",
-        "curated_json_path",
-        "output_clip_paths",
-        "error",
-    }
-    for key, value in fields.items():
-        if key not in allowed:
-            raise ValueError(f"Unsupported job field: {key}")
-        job[key] = value
-    return dict(job)
+        allowed = {
+            "status",
+            "video_path",
+            "curated_json_path",
+            "output_clip_paths",
+            "error",
+        }
+        for key, value in fields.items():
+            if key not in allowed:
+                raise ValueError(f"Unsupported job field: {key}")
+            if key == "status":
+                if isinstance(value, JobStatus):
+                    value = value.value
+                elif value not in {s.value for s in JobStatus}:
+                    raise ValueError(f"Unsupported job status: {value}")
+            job[key] = value
+
+        logger.debug(
+            "Updated job_id=%s fields=%s",
+            job_id,
+            {k: fields[k] for k in fields if k != "error"},
+        )
+        return dict(job)
 
 
 def update_job_status(
     job_id: str,
-    status: str,
+    status: JobStatus | str,
     error: str | None = None,
 ) -> dict[str, Any] | None:
     """
@@ -68,9 +90,10 @@ def update_job_status(
 
     Optionally set ``error`` when failing; clears ``error`` when not failed.
     """
-    fields: dict[str, Any] = {"status": status}
+    status_value = status.value if isinstance(status, JobStatus) else status
+    fields: dict[str, Any] = {"status": status_value}
     if error is not None:
         fields["error"] = error
-    elif status != "failed":
+    elif status_value != JobStatus.FAILED.value:
         fields["error"] = None
     return update_job(job_id, **fields)

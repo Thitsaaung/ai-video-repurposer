@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
-from pydantic import BaseModel, Field, HttpUrl
+import logging
 
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel, Field, HttpUrl, field_validator
+
+from app.core.enums import JobStatus
+from app.core.paths import to_public_job
+from app.core.validation import assert_youtube_url, validate_job_id
 from app.services import job_store
 from app.services.video_processor import process_video_job
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["videos"])
 
@@ -16,12 +23,18 @@ class ProcessVideoRequest(BaseModel):
 
     url: HttpUrl = Field(..., description="YouTube video URL to repurpose")
 
+    @field_validator("url")
+    @classmethod
+    def _must_be_youtube(cls, value: HttpUrl) -> HttpUrl:
+        assert_youtube_url(str(value))
+        return value
+
 
 class JobResponse(BaseModel):
-    """In-memory job record returned by the API."""
+    """Public job record (no absolute filesystem paths)."""
 
     job_id: str
-    status: str
+    status: JobStatus
     url: str
     created_at: str
     video_path: str | None = None
@@ -38,15 +51,18 @@ async def process_video(
     """
     Create a queued job, schedule real engine processing, return immediately.
     """
-    job = job_store.create_job(str(payload.url))
+    url = str(payload.url)
+    job = job_store.create_job(url)
     background_tasks.add_task(process_video_job, job["job_id"], job["url"])
-    return JobResponse(**job)
+    logger.info("Enqueued job_id=%s for processing", job["job_id"])
+    return JobResponse(**to_public_job(job))
 
 
 @router.get("/jobs/{job_id}", response_model=JobResponse)
 async def get_job(job_id: str) -> JobResponse:
     """Fetch a previously created job by id."""
-    job = job_store.get_job(job_id)
+    validated_id = validate_job_id(job_id)
+    job = job_store.get_job(validated_id)
     if job is None:
-        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-    return JobResponse(**job)
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JobResponse(**to_public_job(job))

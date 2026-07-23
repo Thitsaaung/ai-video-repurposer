@@ -10,6 +10,7 @@ export default function HomePage() {
   const {
     job,
     error,
+    connectionWarning,
     lastUpdated,
     isSubmitting,
     isPolling,
@@ -36,18 +37,13 @@ export default function HomePage() {
 
         <VideoForm onSubmit={submit} disabled={isBusy} />
 
-        {isBusy ? (
-          <LoadingSpinner
-            label={
-              isSubmitting
-                ? "Submitting video…"
-                : "Processing video — this can take several minutes…"
-            }
-          />
-        ) : null}
+        {isSubmitting ? <LoadingSpinner label="Submitting video…" /> : null}
 
         {error ? (
-          <p className="text-sm text-[var(--danger)]" role="alert">
+          <p
+            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
@@ -56,6 +52,7 @@ export default function HomePage() {
           job={job}
           lastUpdated={lastUpdated}
           isPolling={isPolling}
+          connectionWarning={connectionWarning}
         />
 
         {job?.status === "completed" ? (
