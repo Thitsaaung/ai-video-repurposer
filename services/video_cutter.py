@@ -189,10 +189,13 @@ def cut_clip(
 
     try:
         # cwd=PROJECT_ROOT so relative temp.srt resolves for the subtitles filter
+        # encoding=utf-8: avoid Windows cp1252 decode crashes on Unicode paths in FFmpeg logs
         completed = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
             cwd=str(PROJECT_ROOT),
         )

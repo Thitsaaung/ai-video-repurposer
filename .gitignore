@@ -73,6 +73,12 @@ temp_*.mp3
 temp_*.srt
 *.tmp
 
+# Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+
 # OS / editor
 .DS_Store
 Thumbs.db
