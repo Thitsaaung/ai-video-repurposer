@@ -1,0 +1,11 @@
+﻿# Direct dependencies for the video-processing pipeline + HTTP API.
+# Transitive deps are installed automatically by pip.
+
+yt-dlp==2026.7.4
+openai==2.46.0
+anthropic==0.117.0
+pydantic==2.13.4
+pydantic-settings==2.0.0
+python-dotenv==1.2.2
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
