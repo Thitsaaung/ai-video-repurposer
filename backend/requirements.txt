@@ -1,4 +1,4 @@
-﻿# Direct dependencies for the video-processing pipeline + HTTP API.
+# Direct dependencies for the video-processing pipeline + HTTP API.
 # Transitive deps are installed automatically by pip.
 
 yt-dlp==2026.7.4
