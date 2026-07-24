@@ -1,0 +1,6 @@
+# Railway / Nixpacks — backend deploy root.
+# yt-dlp needs a JS runtime on PATH for YouTube EJS challenges.
+# Extend the auto-detected Python provider; do not replace it.
+
+[phases.setup]
+nixPkgs = ["...", "nodejs_20"]
