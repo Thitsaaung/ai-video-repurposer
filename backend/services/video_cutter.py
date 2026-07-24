@@ -11,6 +11,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# backend/ is the application root (Railway deploy root).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_CLIPS_DIR = PROJECT_ROOT / "output_clips"
 TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
@@ -467,7 +468,7 @@ def _pick_latest_curated(transcripts_dir: Path = TRANSCRIPTS_DIR) -> Path:
     )
     if not candidates:
         raise FileNotFoundError(
-            f"No curated_*.json in {transcripts_dir}. Run services/engine.py first."
+            f"No curated_*.json in {transcripts_dir}. Run: python -m services.engine <url>"
         )
     return candidates[0]
 
@@ -487,7 +488,7 @@ def _pick_latest_curated_with_video(
     )
     if not candidates:
         raise FileNotFoundError(
-            f"No curated_*.json in {transcripts_dir}. Run services/engine.py first."
+            f"No curated_*.json in {transcripts_dir}. Run: python -m services.engine <url>"
         )
 
     errors: list[str] = []
@@ -521,9 +522,9 @@ if __name__ == "__main__":
     # Require explicit paths — never auto-pick old downloads/curated files
     if len(sys.argv) < 3:
         print(
-            "Usage: python services/video_cutter.py <video_path> <curated_json_path>\n"
+            "Usage: python -m services.video_cutter <video_path> <curated_json_path>\n"
             "Both arguments are required so an old video is never selected by accident.\n"
-            "Prefer: python services/engine.py <youtube_url>"
+            "Prefer: python -m services.engine <youtube_url>"
         )
         sys.exit(1)
 

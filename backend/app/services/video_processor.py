@@ -3,25 +3,17 @@
 from __future__ import annotations
 
 import logging
-import sys
 import threading
-from pathlib import Path
 
 from app.core.enums import JobStatus
 from app.services import job_store
+from services.engine import process_video_to_clips
 
 logger = logging.getLogger(__name__)
 
 # Serialize pipeline runs so shared temp files (temp.srt / temp_audio.mp3)
 # are not corrupted by concurrent BackgroundTasks — without changing the engine.
 _pipeline_lock = threading.Lock()
-
-# Repo root so ``from services.engine import …`` resolves when cwd is ``backend/``.
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from services.engine import process_video_to_clips  # noqa: E402
 
 _CLIENT_FAILURE_MESSAGE = (
     "Video processing failed. Please try again or use a different YouTube URL."

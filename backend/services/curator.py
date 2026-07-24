@@ -13,17 +13,15 @@ from typing import Any, Literal
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-# Sibling import works when run as `python services/curator.py`
-_SERVICES_DIR = Path(__file__).resolve().parent
-if str(_SERVICES_DIR) not in sys.path:
-    sys.path.insert(0, str(_SERVICES_DIR))
+from services.clip_validator import validate_and_filter_clips
 
-from clip_validator import validate_and_filter_clips
-
+# backend/ is the application root (Railway deploy root).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
 
-load_dotenv(PROJECT_ROOT / ".env")
+# Prefer backend/.env; fall back to monorepo root .env for local development.
+load_dotenv(PROJECT_ROOT.parent / ".env")
+load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -679,7 +677,7 @@ def _pick_latest_sanitized(transcripts_dir: Path = TRANSCRIPTS_DIR) -> Path:
     if not candidates:
         raise FileNotFoundError(
             f"No sanitized_*.json files in {transcripts_dir}. "
-            "Run services/pipeline.py first."
+            "Run: python -m services.pipeline <url> first."
         )
     return candidates[0]
 

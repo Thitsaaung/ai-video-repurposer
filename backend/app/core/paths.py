@@ -15,7 +15,7 @@ def _basename(path_value: str | None) -> str | None:
 
 
 def _project_relative(path_value: str | None) -> str | None:
-    """Return a repo-relative POSIX path when possible, else the basename."""
+    """Return an app-root-relative POSIX path when possible, else the basename."""
     if not path_value:
         return None
     path = Path(path_value)

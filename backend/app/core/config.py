@@ -1,4 +1,4 @@
-"""Application settings loaded from environment (and optional root ``.env``)."""
+"""Application settings loaded from environment (and optional ``.env`` files)."""
 
 from __future__ import annotations
 
@@ -8,15 +8,18 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# backend/app/core/config.py → repo root
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# backend/app/core/config.py → backend/ (Railway / API application root)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+# Monorepo root (local .env may still live here during development)
+_REPO_ROOT = BACKEND_ROOT.parent
 
 
 class Settings(BaseSettings):
     """Runtime configuration for the FastAPI app."""
 
     model_config = SettingsConfigDict(
-        env_file=str(PROJECT_ROOT / ".env"),
+        # backend/.env wins over repo-root .env when both define a key
+        env_file=(str(_REPO_ROOT / ".env"), str(BACKEND_ROOT / ".env")),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -45,11 +48,12 @@ class Settings(BaseSettings):
 
     @property
     def project_root(self) -> Path:
-        return PROJECT_ROOT
+        """Application root (backend/). Kept name for existing callers."""
+        return BACKEND_ROOT
 
     @property
     def output_clips_dir(self) -> Path:
-        path = PROJECT_ROOT / "output_clips"
+        path = BACKEND_ROOT / "output_clips"
         path.mkdir(parents=True, exist_ok=True)
         return path
 

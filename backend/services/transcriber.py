@@ -14,6 +14,7 @@ from openai import OpenAI, OpenAIError
 
 logger = logging.getLogger(__name__)
 
+# backend/ is the application root (Railway deploy root).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOWNLOADS_DIR = PROJECT_ROOT / "downloads"
 TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
@@ -21,8 +22,9 @@ TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
 # Whisper API hard limit is 25MB; stay under with a safety margin
 MAX_WHISPER_UPLOAD_BYTES = 24 * 1024 * 1024
 
-# Load OPENAI_API_KEY (and any other secrets) from the project .env
-load_dotenv(PROJECT_ROOT / ".env")
+# Prefer backend/.env; fall back to monorepo root .env for local development.
+load_dotenv(PROJECT_ROOT.parent / ".env")
+load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 SUPPORTED_EXTENSIONS = {
     ".flac",
@@ -246,7 +248,7 @@ def _pick_sample_video(downloads_dir: Path = DOWNLOADS_DIR) -> Path:
     if not downloads_dir.is_dir():
         raise FileNotFoundError(
             f"Downloads directory not found: {downloads_dir}. "
-            "Run services/video_downloader.py first."
+            "Run: python -m services.video_downloader first."
         )
 
     candidates = sorted(
@@ -257,7 +259,7 @@ def _pick_sample_video(downloads_dir: Path = DOWNLOADS_DIR) -> Path:
     if not candidates:
         raise FileNotFoundError(
             f"No video files found in {downloads_dir}. "
-            "Run services/video_downloader.py first."
+            "Run: python -m services.video_downloader first."
         )
     return candidates[0]
 

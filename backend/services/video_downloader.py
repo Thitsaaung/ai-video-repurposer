@@ -9,7 +9,7 @@ import yt_dlp
 
 logger = logging.getLogger(__name__)
 
-# Project root / downloads — independent of the caller's working directory
+# backend/downloads — independent of the caller's working directory
 DOWNLOADS_DIR = Path(__file__).resolve().parent.parent / "downloads"
 
 # Best video + best audio, capped at 1080p; fall back to best combined ≤1080p

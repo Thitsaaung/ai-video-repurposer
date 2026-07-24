@@ -10,13 +10,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-# Allow `python services/pipeline.py` to import sibling modules
-_SERVICES_DIR = Path(__file__).resolve().parent
-if str(_SERVICES_DIR) not in sys.path:
-    sys.path.insert(0, str(_SERVICES_DIR))
-
-from transcriber import TRANSCRIPTS_DIR, transcribe_video
-from video_downloader import download_video
+from services.transcriber import TRANSCRIPTS_DIR, transcribe_video
+from services.video_downloader import download_video
 
 logger = logging.getLogger(__name__)
 

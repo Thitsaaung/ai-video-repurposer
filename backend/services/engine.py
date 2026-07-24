@@ -4,17 +4,11 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
 from typing import Any
 
-# Allow `python services/engine.py` to import sibling modules
-_SERVICES_DIR = Path(__file__).resolve().parent
-if str(_SERVICES_DIR) not in sys.path:
-    sys.path.insert(0, str(_SERVICES_DIR))
-
-from curator import curate_clips
-from pipeline import run_ingestion_pipeline
-from video_cutter import process_all_curated_clips
+from services.curator import curate_clips
+from services.pipeline import run_ingestion_pipeline
+from services.video_cutter import process_all_curated_clips
 
 logger = logging.getLogger(__name__)
 

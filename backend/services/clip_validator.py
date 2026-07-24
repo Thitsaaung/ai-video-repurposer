@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from curator import Clip
+    from services.curator import Clip
 
 logger = logging.getLogger(__name__)
 
