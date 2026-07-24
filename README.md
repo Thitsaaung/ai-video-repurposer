@@ -33,7 +33,9 @@ Processing Pipeline
 - FFmpeg
 
 Deployment
-- Railway (planned)
+- Railway (backend Root Directory = `backend/`, builder = **Railpack**)
+  - Service variable: `RAILPACK_DEPLOY_APT_PACKAGES=ffmpeg`
+  - Optional: `RAILPACK_PACKAGES=node` (yt-dlp EJS / YouTube challenges)
 - Vercel (planned)
 
 ---

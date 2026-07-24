@@ -1,7 +1,0 @@
-# Railway / Nixpacks — backend deploy root.
-# - nodejs_20: yt-dlp YouTube EJS challenges
-# - ffmpeg: yt-dlp format merge + clip cutting / captions
-# Extend the auto-detected Python provider; do not replace it.
-
-[phases.setup]
-nixPkgs = ["...", "nodejs_20", "ffmpeg"]
