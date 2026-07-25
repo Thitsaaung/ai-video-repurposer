@@ -106,8 +106,47 @@ OPENAI_API_KEY=sk-...
 |----------|----------|---------|
 | `OPENAI_API_KEY` | Yes (Whisper + default curation) | `transcriber.py`, `curator.py` |
 | `ANTHROPIC_API_KEY` | No | `curator.py` (Claude 3.5 Sonnet if present) |
+| `YOUTUBE_COOKIES_FILE` | No | `video_downloader.py` (Netscape cookies path) |
+| `YOUTUBE_COOKIES_BASE64` | No | `video_downloader.py` (base64 cookies; Railway-friendly) |
 
 Loaded via `python-dotenv` from `backend/.env`, with a fallback to the monorepo root `.env` for local development.
+
+### YouTube cookies (production / bot challenges)
+
+YouTube may return *Sign in to confirm you're not a bot* on cloud IPs. Phase 1 passes a Netscape cookie file into yt-dlp (`cookiefile` only). Use a **dedicated** Google account when possible.
+
+**Export cookies (local machine):**
+
+1. Sign in to YouTube in a browser (dedicated account recommended).
+2. Export cookies in **Netscape** `cookies.txt` format (see [yt-dlp exporting tips](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
+3. Keep the file private — treat it like a password.
+
+**Local:**
+
+```env
+YOUTUBE_COOKIES_FILE=C:\path\to\cookies.txt
+```
+
+**Railway (recommended):**
+
+```powershell
+# From the cookies.txt file on your machine:
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("cookies.txt"))
+```
+
+```bash
+base64 -w0 cookies.txt   # Linux
+base64 -i cookies.txt | tr -d '\n'   # macOS
+```
+
+Set as a **backend service variable** (never commit):
+
+```text
+YOUTUBE_COOKIES_BASE64=<paste base64>
+```
+
+Resolution order: existing `YOUTUBE_COOKIES_FILE` → `YOUTUBE_COOKIES_BASE64` (temp file) → no cookies.  
+When downloads start failing again with bot/sign-in errors, re-export cookies and update the variable, then restart/redeploy.
 
 ---
 

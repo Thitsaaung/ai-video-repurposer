@@ -7,6 +7,8 @@ from pathlib import Path
 
 import yt_dlp
 
+from app.core.config import resolve_youtube_cookiefile
+
 logger = logging.getLogger(__name__)
 
 # backend/downloads — independent of the caller's working directory
@@ -23,7 +25,7 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
     Uses yt-dlp to fetch the best video and audio streams (up to 1080p),
     merges them into a single file under ``downloads/``, and returns that path.
     """
-    if not url or not url.strip():
+    if not url or not str(url).strip():
         raise ValueError("A non-empty video URL is required.")
 
     dest = Path(output_dir) if output_dir is not None else DOWNLOADS_DIR
@@ -37,6 +39,10 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
         "quiet": False,
         "no_warnings": False,
     }
+
+    cookiefile = resolve_youtube_cookiefile()
+    if cookiefile:
+        ydl_opts["cookiefile"] = cookiefile
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
