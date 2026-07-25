@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import logging
 import os
 import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/core/config.py → backend/ (Railway / API application root)
@@ -29,6 +30,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
     app_name: str = "AI Video Repurposer API"
@@ -41,8 +43,20 @@ class Settings(BaseSettings):
     )
 
     # YouTube / yt-dlp cookie auth (Phase 1). Never log these values.
-    youtube_cookies_file: str | None = None
-    youtube_cookies_base64: str | None = None
+    youtube_cookies_file: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "YOUTUBE_COOKIES_FILE",
+            "youtube_cookies_file",
+        ),
+    )
+    youtube_cookies_base64: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "YOUTUBE_COOKIES_BASE64",
+            "youtube_cookies_base64",
+        ),
+    )
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -75,10 +89,29 @@ class Settings(BaseSettings):
         return path
 
 
+def _env_cookie_value(name: str) -> str | None:
+    """Read a cookie-related env var (case-insensitive key match). Never log value."""
+    target = name.upper()
+    for key, value in os.environ.items():
+        if key.upper() == target:
+            cleaned = value.strip() if isinstance(value, str) else ""
+            return cleaned or None
+    return None
+
+
 def _write_cookies_from_base64(encoded: str) -> Path:
-    """Decode Netscape cookies from base64 into a restricted temp file."""
-    raw = base64.b64decode(encoded.strip(), validate=False)
-    # Netscape cookie files are text; reject empty payloads.
+    """Decode Netscape cookies from base64 into a restricted temp file (mode 0600)."""
+    # Railway / paste UIs often inject whitespace or newlines into secrets.
+    normalized = "".join(encoded.split())
+    missing_padding = len(normalized) % 4
+    if missing_padding:
+        normalized += "=" * (4 - missing_padding)
+
+    try:
+        raw = base64.b64decode(normalized, validate=False)
+    except binascii.Error as exc:
+        raise ValueError("YOUTUBE_COOKIES_BASE64 is not valid base64") from exc
+
     if not raw.strip():
         raise ValueError("YOUTUBE_COOKIES_BASE64 decoded to an empty cookie file")
 
@@ -87,7 +120,11 @@ def _write_cookies_from_base64(encoded: str) -> Path:
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(raw)
-        os.chmod(path, 0o600)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            # Best-effort on platforms that ignore POSIX modes.
+            pass
     except Exception:
         path.unlink(missing_ok=True)
         raise
@@ -106,25 +143,38 @@ def resolve_youtube_cookiefile() -> str | None:
     """
     settings = get_settings()
 
-    file_value = settings.youtube_cookies_file
+    env_file_set = _env_cookie_value("YOUTUBE_COOKIES_FILE") is not None
+    env_b64_set = _env_cookie_value("YOUTUBE_COOKIES_BASE64") is not None
+    logger.info(
+        "YouTube cookie env: YOUTUBE_COOKIES_FILE_present=%s "
+        "YOUTUBE_COOKIES_BASE64_present=%s settings_file=%s settings_base64=%s",
+        env_file_set,
+        env_b64_set,
+        bool(settings.youtube_cookies_file),
+        bool(settings.youtube_cookies_base64),
+    )
+
+    # Prefer Settings, fall back to raw environ (Railway / case variants).
+    file_value = settings.youtube_cookies_file or _env_cookie_value(
+        "YOUTUBE_COOKIES_FILE",
+    )
     if file_value:
         candidate = Path(file_value).expanduser()
         if candidate.is_file():
-            resolved = str(candidate.resolve())
-            logger.info("Using YouTube cookies from YOUTUBE_COOKIES_FILE")
-            return resolved
+            return str(candidate.resolve())
         logger.warning(
             "YOUTUBE_COOKIES_FILE is set but file was not found; trying base64 next",
         )
 
-    encoded = settings.youtube_cookies_base64
+    encoded = settings.youtube_cookies_base64 or _env_cookie_value(
+        "YOUTUBE_COOKIES_BASE64",
+    )
     if encoded:
         try:
             path = _write_cookies_from_base64(encoded)
         except Exception:
             logger.exception("Failed to materialize YOUTUBE_COOKIES_BASE64")
             return None
-        logger.info("Using YouTube cookies from YOUTUBE_COOKIES_BASE64 (temp file)")
         return str(path)
 
     return None

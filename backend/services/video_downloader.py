@@ -40,9 +40,22 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
         "no_warnings": False,
     }
 
-    cookiefile = resolve_youtube_cookiefile()
-    if cookiefile:
-        ydl_opts["cookiefile"] = cookiefile
+    cookie_path = resolve_youtube_cookiefile()
+    if cookie_path:
+        cookie_file = Path(cookie_path)
+        if cookie_file.is_file():
+            logger.info("YouTube cookies loaded")
+            logger.info("Cookie file exists")
+            logger.info("Using cookiefile: %s", cookie_path)
+            ydl_opts["cookiefile"] = cookie_path
+        else:
+            logger.warning(
+                "Resolved cookie path does not exist on disk: %s",
+                cookie_path,
+            )
+            logger.info("No YouTube cookies configured")
+    else:
+        logger.info("No YouTube cookies configured")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
