@@ -4,14 +4,14 @@ import { toast } from "sonner";
 
 export const notify = {
   jobSubmitted(): void {
-    toast.success("Job submitted — analyzing your video…");
+    toast.success("Started — processing your video…");
   },
 
   jobCompleted(clipCount: number): void {
     toast.success(
       clipCount === 1
-        ? "Job completed — 1 clip ready."
-        : `Job completed — ${clipCount} clips ready.`,
+        ? "Your clip is ready."
+        : `Your clips are ready — ${clipCount} shorts.`,
     );
   },
 

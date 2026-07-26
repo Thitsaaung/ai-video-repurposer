@@ -58,6 +58,22 @@ class Settings(BaseSettings):
         ),
     )
 
+    # Editorial padding applied only at cut time (not in curated JSON).
+    clip_pad_start_seconds: float = Field(
+        default=3.0,
+        validation_alias=AliasChoices(
+            "CLIP_PAD_START_SECONDS",
+            "clip_pad_start_seconds",
+        ),
+    )
+    clip_pad_end_seconds: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices(
+            "CLIP_PAD_END_SECONDS",
+            "clip_pad_end_seconds",
+        ),
+    )
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
@@ -76,6 +92,13 @@ class Settings(BaseSettings):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+    @field_validator("clip_pad_start_seconds", "clip_pad_end_seconds")
+    @classmethod
+    def _non_negative_pad(cls, value: float) -> float:
+        if value < 0:
+            raise ValueError("clip padding seconds must be >= 0")
+        return float(value)
 
     @property
     def project_root(self) -> Path:

@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from app.core.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 # backend/ is the application root (Railway deploy root).
@@ -16,6 +18,79 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_CLIPS_DIR = PROJECT_ROOT / "output_clips"
 TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
 DOWNLOADS_DIR = PROJECT_ROOT / "downloads"
+
+
+def _probe_video_duration_seconds(video_path: Path) -> float | None:
+    """Return media duration via ffprobe, or None if unavailable."""
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(video_path),
+    ]
+    try:
+        completed = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except FileNotFoundError:
+        logger.warning("ffprobe not on PATH; clip padding will clamp start to 0 only")
+        return None
+    if completed.returncode != 0:
+        logger.warning(
+            "ffprobe failed for %s; clip padding will clamp start to 0 only",
+            video_path.name,
+        )
+        return None
+    try:
+        duration = float((completed.stdout or "").strip())
+    except ValueError:
+        return None
+    if duration <= 0:
+        return None
+    return duration
+
+
+def _apply_editorial_padding(
+    start_time: float,
+    end_time: float,
+    *,
+    pad_start: float,
+    pad_end: float,
+    video_duration: float | None,
+) -> tuple[float, float]:
+    """
+    Expand a curated window for Shorts packaging only.
+
+    Padding belongs in the cutter (not Whisper/curator/validator): curated JSON
+    stays the semantic speech window; render-time pad is editorial pre/post-roll.
+    """
+    start = float(start_time)
+    end = float(end_time)
+    cut_start = max(0.0, start - max(0.0, pad_start))
+    cut_end = end + max(0.0, pad_end)
+
+    if video_duration is not None and video_duration > 0:
+        cut_start = min(max(0.0, cut_start), video_duration)
+        cut_end = min(max(0.0, cut_end), video_duration)
+
+    if cut_end <= cut_start:
+        # Degenerate after clamp — keep original curated window (still clamped).
+        cut_start = max(0.0, start)
+        cut_end = end
+        if video_duration is not None and video_duration > 0:
+            cut_start = min(cut_start, video_duration)
+            cut_end = min(max(cut_end, cut_start), video_duration)
+
+    return round(cut_start, 3), round(cut_end, 3)
 
 
 def _sanitize_title(title: str, max_len: int = 60) -> str:
@@ -289,6 +364,18 @@ def process_all_curated_clips(video_path: str, curated_json_path: str) -> list[s
     # Sanitized transcript comes only from THIS curated JSON (not "latest" scan)
     sanitized_path = _resolve_sanitized_path(payload, curated_path)
 
+    # Editorial pad is cutter-only; curated JSON on disk is never rewritten.
+    settings = get_settings()
+    pad_start = float(settings.clip_pad_start_seconds)
+    pad_end = float(settings.clip_pad_end_seconds)
+    video_duration = _probe_video_duration_seconds(video)
+    logger.info(
+        "Editorial padding pad_start=%.3fs pad_end=%.3fs video_duration=%s",
+        pad_start,
+        pad_end,
+        f"{video_duration:.3f}s" if video_duration is not None else "unknown",
+    )
+
     OUTPUT_CLIPS_DIR.mkdir(parents=True, exist_ok=True)
     generated: list[str] = []
     failures: list[str] = []
@@ -312,15 +399,39 @@ def process_all_curated_clips(video_path: str, curated_json_path: str) -> list[s
         temp_srt_path = PROJECT_ROOT / relative_srt
 
         try:
+            cut_start, cut_end = _apply_editorial_padding(
+                float(start_time),
+                float(end_time),
+                pad_start=pad_start,
+                pad_end=pad_end,
+                video_duration=video_duration,
+            )
+            # Same padded window for SRT + FFmpeg (curated clip object untouched).
+            render_clip = {
+                **clip,
+                "start_time": cut_start,
+                "end_time": cut_end,
+                "duration": round(cut_end - cut_start, 3),
+            }
+            if cut_start != float(start_time) or cut_end != float(end_time):
+                logger.info(
+                    "clip_id=%s padded window %.3f→%.3f (curated %.3f→%.3f)",
+                    clip_id,
+                    cut_start,
+                    cut_end,
+                    float(start_time),
+                    float(end_time),
+                )
+
             generate_srt_for_clip(
-                clip=clip,
+                clip=render_clip,
                 sanitized_json_path=str(sanitized_path),
                 output_srt_path=str(temp_srt_path),
             )
             path = cut_clip(
                 input_video_path=str(video),
-                start_time=float(start_time),
-                end_time=float(end_time),
+                start_time=cut_start,
+                end_time=cut_end,
                 output_clip_path=str(out_path),
                 relative_srt_path=relative_srt,
             )

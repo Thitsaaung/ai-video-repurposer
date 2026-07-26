@@ -15,9 +15,9 @@ const BADGE_STYLES: Record<JobStatus, string> = {
 };
 
 const LABELS: Record<JobStatus, string> = {
-  queued: "Queued",
-  processing: "Processing",
-  completed: "Completed",
+  queued: "In queue",
+  processing: "In progress",
+  completed: "Ready",
   failed: "Failed",
 };
 

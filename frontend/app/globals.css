@@ -27,3 +27,44 @@ body {
   color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+@keyframes processing-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes processing-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.processing-breathe-bar {
+  transform-origin: center;
+  animation: processing-breathe 2.8s ease-in-out infinite;
+}
+
+.processing-glow-dot {
+  animation: processing-glow 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .processing-breathe-bar,
+  .processing-glow-dot {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
+}
+

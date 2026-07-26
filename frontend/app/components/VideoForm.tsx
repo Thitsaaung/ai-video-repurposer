@@ -36,9 +36,9 @@ export default function VideoForm({
       <button
         type="submit"
         disabled={disabled}
-        className="rounded-lg bg-[var(--accent)] px-5 py-3 font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-lg bg-[var(--accent)] px-5 py-3 font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[12.5rem]"
       >
-        {disabled ? "Working…" : "Generate Clips"}
+        {disabled ? "Processing your video…" : "Generate Clips"}
       </button>
     </form>
   );

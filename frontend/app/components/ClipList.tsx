@@ -26,9 +26,11 @@ const ClipList = forwardRef<HTMLElement, ClipListProps>(function ClipList(
         className="outline-none"
         aria-label="Generated clips, 0 total"
       >
-        <Card className="border-dashed">
-          <SectionTitle>Generated Clips (0)</SectionTitle>
-          <p className="mt-2 text-[var(--muted)]">No clips were generated.</p>
+        <Card className="border-dashed px-5 py-6">
+          <SectionTitle>Your clips</SectionTitle>
+          <p className="mt-2 text-[var(--muted)]">
+            No clips were generated for this video. Try another link.
+          </p>
         </Card>
       </section>
     );
@@ -39,11 +41,18 @@ const ClipList = forwardRef<HTMLElement, ClipListProps>(function ClipList(
       ref={ref}
       id="generated-clips"
       tabIndex={-1}
-      className="space-y-4 outline-none"
+      className="space-y-5 outline-none"
       aria-label={`Generated clips, ${total} total`}
     >
-      <SectionTitle>{`Generated Clips (${total})`}</SectionTitle>
-      <ul className="grid grid-cols-1 gap-3">
+      <div className="space-y-1">
+        <SectionTitle>
+          {total === 1 ? "Your clip" : `Your clips (${total})`}
+        </SectionTitle>
+        <p className="text-sm text-[var(--muted)]">
+          Preview each short, then download the ones you want to post.
+        </p>
+      </div>
+      <ul className="grid grid-cols-1 gap-4">
         {clips.map((path, index) => (
           <li key={`${index}-${path}`}>
             <ClipCard

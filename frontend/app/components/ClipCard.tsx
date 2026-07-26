@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Card from "./Card";
 import { downloadClip, getClipMediaUrl } from "../lib/api";
-import { clipBasename, clipRelativePath } from "../lib/clipPaths";
 import { notify } from "../lib/notify";
 
 type ClipCardProps = {
@@ -19,8 +18,6 @@ export default function ClipCard({
   isOpen,
   onTogglePlay,
 }: ClipCardProps) {
-  const filename = clipBasename(path);
-  const relative = clipRelativePath(path);
   const clipNumber = index + 1;
   const mediaUrl = getClipMediaUrl(path);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -42,27 +39,20 @@ export default function ClipCard({
     }
   };
 
+  const previewRegionId = `clip-preview-${clipNumber}`;
+
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="flex flex-col gap-5 px-5 py-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+        <div className="min-w-0">
+          <p className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
             Clip {clipNumber}
           </p>
-          <p
-            className="truncate text-base font-medium text-[var(--ink)]"
-            title={filename}
-          >
-            {filename}
-          </p>
-          <p
-            className="break-all font-mono text-xs text-[var(--muted)]"
-            title={path}
-          >
-            {relative}
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Vertical short · ready to share
           </p>
           {downloadError ? (
-            <p className="text-sm text-[var(--danger)]" role="alert">
+            <p className="mt-2 text-sm text-[var(--danger)]" role="alert">
               {downloadError}
             </p>
           ) : null}
@@ -73,9 +63,10 @@ export default function ClipCard({
             type="button"
             onClick={onTogglePlay}
             aria-expanded={isOpen}
-            className="rounded-md border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            aria-controls={previewRegionId}
+            className="min-h-11 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-4 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            {isOpen ? "Close" : "Play"}
+            {isOpen ? "Close preview" : "Preview"}
           </button>
           <button
             type="button"
@@ -83,7 +74,7 @@ export default function ClipCard({
               void handleDownload();
             }}
             disabled={isDownloading}
-            className="rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-11 rounded-lg border border-[var(--accent)] bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDownloading ? "Downloading…" : "Download"}
           </button>
@@ -91,12 +82,16 @@ export default function ClipCard({
       </div>
 
       {isOpen ? (
-        <div className="overflow-hidden rounded-md border border-[var(--line)] bg-black">
+        <div
+          id={previewRegionId}
+          className="overflow-hidden rounded-lg border border-[var(--line)] bg-black"
+        >
           <video
             key={mediaUrl}
             controls
             playsInline
             preload="metadata"
+            aria-label={`Preview of clip ${clipNumber}`}
             className="aspect-[9/16] max-h-[70vh] w-full bg-black object-contain sm:aspect-video sm:max-h-[480px]"
             src={mediaUrl}
           >

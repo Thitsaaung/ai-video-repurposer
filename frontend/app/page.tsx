@@ -68,19 +68,21 @@ export default function HomePage() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--wash)_0%,_transparent_55%),linear-gradient(160deg,_var(--bg)_0%,_var(--bg-deep)_100%)]"
       />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-8 px-6 py-16">
-        <header>
+      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-start gap-10 px-6 py-14 sm:py-20">
+        <header className="space-y-3">
           <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight text-[var(--ink)] sm:text-5xl">
             AI Video Repurposer
           </h1>
-          <p className="mt-3 max-w-xl text-base text-[var(--muted)] sm:text-lg">
+          <p className="max-w-xl text-base leading-relaxed text-[var(--muted)] sm:text-lg">
             Paste a YouTube URL to generate short vertical clips automatically.
           </p>
         </header>
 
         <VideoForm onSubmit={submit} disabled={isBusy} />
 
-        {isSubmitting ? <LoadingSpinner label="Submitting video…" /> : null}
+        {isSubmitting ? (
+          <LoadingSpinner label="Starting your job…" />
+        ) : null}
 
         {error ? (
           <p
