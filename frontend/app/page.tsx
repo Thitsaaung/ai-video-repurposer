@@ -68,7 +68,7 @@ export default function HomePage() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--wash)_0%,_transparent_55%),linear-gradient(160deg,_var(--bg)_0%,_var(--bg-deep)_100%)]"
       />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-start gap-10 px-6 py-14 sm:py-20">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-start gap-10 px-6 py-14 sm:max-w-3xl sm:gap-12 sm:py-20">
         <header className="space-y-3">
           <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight text-[var(--ink)] sm:text-5xl">
             AI Video Repurposer

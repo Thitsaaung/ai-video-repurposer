@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         ),
     )
     clip_pad_end_seconds: float = Field(
-        default=0.0,
+        default=1.0,
         validation_alias=AliasChoices(
             "CLIP_PAD_END_SECONDS",
             "clip_pad_end_seconds",

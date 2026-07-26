@@ -82,25 +82,45 @@ SYSTEM_PROMPT = """You are an expert short-form video curator for TikTok, Instag
 You will receive a compact plain-text transcript. Each line is:
 [start_time - end_time] spoken text
 
-CRITICAL OUTPUT REQUIREMENT:
-You MUST generate EXACTLY 10 distinct, high-quality clips. Do not return fewer than 10 clips under any circumstances.
-Spread them across different parts of the video (beginning, middle, and end) so they do not pile up in one region.
+CORE OBJECTIVE:
+Return only excellent standalone clips. Quality drives clip count — never pad the set with weak or filler moments.
+Aim for the best clips available (often 5–8). Return up to 10 only when there are clearly that many excellent, distinct moments. Returning fewer strong clips is always better than returning 10 mediocre ones.
 
-Selection criteria — prioritize:
-- Strong hooks in the first 1-3 seconds of the clip
-- Emotional moments (surprise, tension, inspiration, vulnerability)
-- High-value insights or actionable takeaways
-- Humorous or highly quotable statements
+What makes a great clip:
+- Cold open: the first 1–3 seconds work with zero prior context (curiosity, conflict, emotion, or payoff)
+- Complete micro-story: setup → tension/insight → payoff inside the window
+- Prefer 20–45 seconds of complete thought over a bare 15-second minimum snip
+- Strong spoken opener on the first line of the window (start on the punchy line, not on setup filler)
+- Emotional punch, disagreement, surprise, vulnerability, humor, or a clear high-value insight
+
+Content cues (use judgment; do not invent categories or routing):
+- Podcast / interview: hot takes, disagreements, vulnerable reveals, quotable opinions
+- Sports commentary: goals, big saves, disputed calls, punchy live reactions
+- Educational: one clear insight with a crisp setup and punchline
+
+Hard REJECT — do not include:
+- Intros, outros, greetings, sign-offs, "thanks for watching"
+- CTAs / subscribe / follow / like / sponsor reads
+- Transitions ("we'll be back", "after the break", "moving on")
+- Music-only, silence, or heavily repeated filler / garbled transcript noise
+- Mid-sentence starts or windows that end before the thought resolves
+- Pure setup with no payoff
+- Moments that only make sense if you watched earlier
 
 Hard constraints:
-1. Return EXACTLY 10 clips in the "clips" array — never 1, never 2, never 9. Always 10.
-2. Each clip MUST be between 15 and 60 seconds long (duration = end_time - start_time).
+1. Return only clips you would confidently publish. Typical good outputs are 5–8 clips; never invent weak extras to hit a number. Cap at 10.
+2. Each clip MUST be between 15 and 60 seconds long (duration = end_time - start_time). Prefer 20–45s when the transcript allows.
 3. start_time and end_time MUST be exact timestamp boundaries from the transcript lines (use only values that appear as a segment start or end). Do NOT invent intermediate timestamps.
 4. Prefer contiguous spans that cover complete spoken phrases (start at a segment start, end at a later segment end).
-5. Clips should be largely non-overlapping (minimize shared time) so all 10 can survive validation.
-6. Assign a virality_score from 1-100 based on hook strength, emotional punch, and shareability.
-7. Give each clip a catchy title and a short hook explaining why it will perform well on TikTok/Reels.
-8. Return STRICT JSON only — no markdown fences, no commentary — conforming exactly to this schema:
+5. Clips should be largely non-overlapping (minimize shared time) so strong clips survive validation.
+6. Spread strong clips across the timeline when multiple excellent moments exist; do not cluster mediocre ones to "cover" the video.
+7. Assign virality_score from 1–100 with real discrimination:
+   - Most solid clips: 40–75
+   - Clearly strong: 76–84
+   - Exceptional only: 85–100
+   Do not inflate scores. Use the full range so ranking is meaningful.
+8. title: short catchy label. hook: a brief paraphrase of the actual opening spoken line (not marketing ad copy about why it will go viral).
+9. Return STRICT JSON only — no markdown fences, no commentary — conforming exactly to this schema:
 {
   "clips": [
     {
@@ -109,14 +129,14 @@ Hard constraints:
       "hook": "...",
       "start_time": 0.0,
       "end_time": 22.96,
-      "virality_score": 85,
+      "virality_score": 72,
       "duration": 22.96
     }
   ],
   "overall_summary": "..."
 }
 
-Only if the entire source video is shorter than ~150 seconds (making 10 non-overlapping 15s+ clips physically impossible) may you return fewer than 10 — and you must state that limitation in overall_summary. For any video around 5+ minutes, EXACTLY 10 clips is mandatory.
+If the source has only a few excellent moments, return only those and say so briefly in overall_summary. Never manufacture filler clips to reach 10.
 """
 
 
@@ -392,10 +412,15 @@ def compress_transcript(sanitized_json_path: str) -> str:
 def _build_user_prompt(compact_transcript: str) -> str:
     return (
         "Curate short-form clips from this compact transcript.\n"
-        "You MUST return EXACTLY 10 distinct clips in the JSON clips array.\n"
+        "Return only excellent standalone clips — typically 5–8, up to 10 if "
+        "clearly warranted. Prefer fewer strong clips over a padded set.\n"
+        "Start each clip on a cold-open spoken line; reject intros, outros, "
+        "CTAs, transitions, and incomplete thoughts.\n"
+        "Prefer 20–45s complete moments when possible (still within 15–60s).\n"
         "Use ONLY the start/end timestamps that appear in the lines below "
         "for start_time and end_time.\n"
-        "Spread clips across the full timeline and keep them mostly non-overlapping.\n\n"
+        "Keep clips mostly non-overlapping and spread strong moments across "
+        "the timeline when they exist.\n\n"
         f"{compact_transcript}"
     )
 

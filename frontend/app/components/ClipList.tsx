@@ -3,7 +3,6 @@
 import { forwardRef, useState } from "react";
 import Card from "./Card";
 import ClipCard from "./ClipCard";
-import SectionTitle from "./SectionTitle";
 
 type ClipListProps = {
   paths: string[] | null | undefined;
@@ -26,10 +25,13 @@ const ClipList = forwardRef<HTMLElement, ClipListProps>(function ClipList(
         className="outline-none"
         aria-label="Generated clips, 0 total"
       >
-        <Card className="border-dashed px-5 py-6">
-          <SectionTitle>Your clips</SectionTitle>
-          <p className="mt-2 text-[var(--muted)]">
-            No clips were generated for this video. Try another link.
+        <Card className="border-dashed px-6 py-10 sm:px-8">
+          <p className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+            No highlights this time
+          </p>
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
+            We couldn’t generate clips from this video. Try another YouTube
+            link.
           </p>
         </Card>
       </section>
@@ -41,18 +43,30 @@ const ClipList = forwardRef<HTMLElement, ClipListProps>(function ClipList(
       ref={ref}
       id="generated-clips"
       tabIndex={-1}
-      className="space-y-5 outline-none"
+      className="space-y-8 outline-none sm:space-y-10"
       aria-label={`Generated clips, ${total} total`}
     >
-      <div className="space-y-1">
-        <SectionTitle>
-          {total === 1 ? "Your clip" : `Your clips (${total})`}
-        </SectionTitle>
+      <header className="space-y-3 rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50 to-[var(--surface)] px-6 py-8 sm:px-8 sm:py-10">
+        <p className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--ink)] sm:text-4xl">
+          <span aria-hidden>🎉 </span>Your clips are ready!
+        </p>
+        <p className="max-w-xl text-base leading-relaxed text-[var(--muted)] sm:text-lg">
+          {total === 1
+            ? "1 AI-generated highlight is ready to preview and download."
+            : `${total} AI-generated highlights are ready to preview and download.`}
+        </p>
+      </header>
+
+      <div className="space-y-2">
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          Your workspace
+        </h2>
         <p className="text-sm text-[var(--muted)]">
           Preview each short, then download the ones you want to post.
         </p>
       </div>
-      <ul className="grid grid-cols-1 gap-4">
+
+      <ul className="grid grid-cols-1 gap-5 sm:gap-6">
         {clips.map((path, index) => (
           <li key={`${index}-${path}`}>
             <ClipCard

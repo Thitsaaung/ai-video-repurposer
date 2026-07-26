@@ -131,7 +131,6 @@ export default function JobStatusPanel({
     );
   }
 
-  const clipCount = (job.output_clip_paths ?? []).length;
   const videoUrl = (job.url || "").trim();
 
   // —— Processing: premium wait experience ——
@@ -211,25 +210,30 @@ export default function JobStatusPanel({
     );
   }
 
-  // —— Completed / failed ——
+  // —— Completed / failed (success hero lives in ClipList) ——
   return (
-    <Card className="px-6 py-8 sm:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <SectionTitle>
-          {job.status === "completed" ? "Complete" : "Something went wrong"}
-        </SectionTitle>
-        <StatusBadge status={job.status} />
-      </div>
+    <Card className="px-6 py-7 sm:px-8">
+      {job.status === "failed" ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <SectionTitle>Something went wrong</SectionTitle>
+          <StatusBadge status={job.status} />
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium text-[var(--muted)]">Source video</p>
+          <StatusBadge status={job.status} />
+        </div>
+      )}
 
       {videoUrl ? (
-        <div className="mt-8 rounded-xl border border-[var(--line)] bg-[var(--bg)]/80 px-4 py-4 sm:px-5">
+        <div className="mt-5 rounded-xl border border-[var(--line)] bg-[var(--bg)]/80 px-4 py-4 sm:px-5">
           <VideoIdentity url={videoUrl} />
         </div>
       ) : null}
 
       {job.status === "failed" && job.error ? (
         <p
-          className="mt-8 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="mt-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
         >
           {job.error}
@@ -238,31 +242,12 @@ export default function JobStatusPanel({
 
       {job.status === "failed" && !job.error ? (
         <p
-          className="mt-8 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="mt-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
         >
           Something went wrong while processing. Please try again with another
           video.
         </p>
-      ) : null}
-
-      {job.status === "completed" ? (
-        <div
-          className="mt-8 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-6"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="font-[family-name:var(--font-display)] text-2xl text-emerald-950">
-            Your clips are ready
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-emerald-900">
-            {clipCount === 0
-              ? "No clips were generated for this video."
-              : clipCount === 1
-                ? "1 short clip is ready to preview and download below."
-                : `${clipCount} short clips are ready to preview and download below.`}
-          </p>
-        </div>
       ) : null}
     </Card>
   );
