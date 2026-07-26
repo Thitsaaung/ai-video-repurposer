@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 import yt_dlp
@@ -16,6 +17,62 @@ DOWNLOADS_DIR = Path(__file__).resolve().parent.parent / "downloads"
 
 # Best video + best audio, capped at 1080p; fall back to best combined ≤1080p
 FORMAT_SELECTOR = "bv*[height<=1080]+ba/b[height<=1080]"
+
+
+def _format_exception_chain(exc: BaseException) -> str:
+    """Flatten __cause__ / __context__ for log lines (diagnostics only)."""
+    parts: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    depth = 0
+    while current is not None and id(current) not in seen and depth < 8:
+        seen.add(id(current))
+        parts.append(
+            f"{type(current).__module__}.{type(current).__name__}: {current!s}"
+        )
+        nxt = current.__cause__ or (
+            current.__context__ if not current.__suppress_context__ else None
+        )
+        current = nxt
+        depth += 1
+    return " | caused by: ".join(parts) if parts else repr(exc)
+
+
+def _log_download_failure(
+    *,
+    url: str,
+    elapsed_s: float,
+    exc: BaseException,
+    kind: str,
+) -> None:
+    """
+    Log full download failure diagnostics for operators.
+
+    Does not alter the exception or any client-facing message.
+    """
+    exc_type = f"{type(exc).__module__}.{type(exc).__name__}"
+    cause = exc.__cause__
+    context = exc.__context__ if not getattr(exc, "__suppress_context__", False) else None
+    logger.error(
+        "Download %s failed url=%s elapsed_s=%.3f "
+        "exc_type=%s exc_message=%r exc_repr=%r exc_args=%r "
+        "cause_type=%s cause_message=%r "
+        "context_type=%s context_message=%r "
+        "exception_chain=%s",
+        kind,
+        url,
+        elapsed_s,
+        exc_type,
+        str(exc),
+        repr(exc),
+        getattr(exc, "args", ()),
+        f"{type(cause).__module__}.{type(cause).__name__}" if cause else None,
+        str(cause) if cause else None,
+        f"{type(context).__module__}.{type(context).__name__}" if context else None,
+        str(context) if context else None,
+        _format_exception_chain(exc),
+        exc_info=exc,
+    )
 
 
 def download_video(url: str, output_dir: Path | str | None = None) -> str:
@@ -57,6 +114,7 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
     else:
         logger.info("No YouTube cookies configured")
 
+    started = time.perf_counter()
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -74,14 +132,28 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
                     filepath = str(Path(filepath).with_suffix(f".{info['ext']}"))
 
             resolved = str(Path(filepath).resolve())
-            logger.info("Downloaded video to %s", resolved)
+            logger.info(
+                "Downloaded video to %s elapsed_s=%.3f",
+                resolved,
+                time.perf_counter() - started,
+            )
             return resolved
 
     except yt_dlp.utils.DownloadError as exc:
-        logger.error("Failed to download video from %s: %s", url, exc)
+        _log_download_failure(
+            url=url,
+            elapsed_s=time.perf_counter() - started,
+            exc=exc,
+            kind="yt-dlp.DownloadError",
+        )
         raise
     except Exception as exc:
-        logger.error("Unexpected error downloading video from %s: %s", url, exc)
+        _log_download_failure(
+            url=url,
+            elapsed_s=time.perf_counter() - started,
+            exc=exc,
+            kind="unexpected",
+        )
         raise
 
 

@@ -22,4 +22,16 @@ export const notify = {
   downloadStarted(): void {
     toast.message("Download started…");
   },
+
+  downloadSucceeded(title?: string): void {
+    toast.success(
+      title && title.trim()
+        ? `Downloaded — ${title.trim()}`
+        : "Download complete",
+    );
+  },
+
+  downloadFailed(message?: string): void {
+    toast.error(message?.trim() || "Download failed. Please try again.");
+  },
 };

@@ -19,6 +19,30 @@ OUTPUT_CLIPS_DIR = PROJECT_ROOT / "output_clips"
 TRANSCRIPTS_DIR = PROJECT_ROOT / "transcripts"
 DOWNLOADS_DIR = PROJECT_ROOT / "downloads"
 
+# libass force_style for Shorts/TikTok readability (SRT content unchanged).
+# Colours are ASS &HAABBGGRR. Alignment=2 is bottom-center. No FontName —
+# rely on the runtime default so Windows/Railway both render without a
+# missing-font failure.
+#
+# Safe-area notes (Sprint 5.5):
+# - MarginV is distance from the bottom for Alignment=2. Lower than 90 moves
+#   captions down; keep enough gap above typical player / Shorts UI controls.
+# - Slightly smaller FontSize + modest side margins prefer ~2-line wraps over
+#   tall 3–4 line stacks (without changing SRT cue text or timing).
+_SUBTITLE_FORCE_STYLE = (
+    "FontSize=24,"
+    "Bold=1,"
+    "PrimaryColour=&H00FFFFFF,"
+    "OutlineColour=&H00000000,"
+    "BorderStyle=1,"
+    "Outline=4,"
+    "Shadow=1,"
+    "Alignment=2,"
+    "MarginL=18,"
+    "MarginR=18,"
+    "MarginV=58"
+)
+
 
 def _probe_video_duration_seconds(video_path: Path) -> float | None:
     """Return media duration via ffprobe, or None if unavailable."""
@@ -229,7 +253,10 @@ def cut_clip(
                 "relative_srt_path must be relative (e.g. 'temp.srt'), "
                 f"got absolute: {relative_srt_path}"
             )
-        video_filter = f"crop=ih*9/16:ih,subtitles={srt_for_filter}"
+        video_filter = (
+            f"crop=ih*9/16:ih,"
+            f"subtitles={srt_for_filter}:force_style='{_SUBTITLE_FORCE_STYLE}'"
+        )
     else:
         video_filter = "crop=ih*9/16:ih"
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { downloadClip, getClipMediaUrl } from "../lib/api";
+import { clipTitleFromPath } from "../lib/clipPaths";
 import { notify } from "../lib/notify";
 import { CloseIcon, DownloadIcon, PlayIcon } from "./icons";
 
@@ -26,6 +27,7 @@ export default function ClipCard({
   onTogglePlay,
 }: ClipCardProps) {
   const clipNumber = index + 1;
+  const title = clipTitleFromPath(path, index);
   const mediaUrl = getClipMediaUrl(path);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -64,10 +66,12 @@ export default function ClipCard({
     notify.downloadStarted();
     try {
       await downloadClip(path);
+      notify.downloadSucceeded(title);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Download failed";
       setDownloadError(message);
+      notify.downloadFailed(message);
     } finally {
       setIsDownloading(false);
     }
@@ -85,8 +89,11 @@ export default function ClipCard({
     >
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Short #{clipNumber}
+          </p>
           <p className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-[var(--ink)] sm:text-[1.75rem]">
-            Highlight #{clipNumber}
+            {title}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--muted)]">
@@ -100,7 +107,7 @@ export default function ClipCard({
                 </span>
               </>
             ) : null}
-            <span>Vertical · Ready to Post</span>
+            <span>9:16 · Ready to post</span>
           </div>
 
           {downloadError ? (
@@ -147,19 +154,22 @@ export default function ClipCard({
       {isOpen ? (
         <div
           id={previewRegionId}
-          className="mt-6 overflow-hidden rounded-2xl border border-[var(--line)] bg-black shadow-inner transition duration-300"
+          className="mt-6 flex justify-center"
         >
-          <video
-            key={mediaUrl}
-            controls
-            playsInline
-            preload="metadata"
-            aria-label={`Preview of highlight ${clipNumber}`}
-            className="aspect-[9/16] max-h-[70vh] w-full bg-black object-contain sm:aspect-video sm:max-h-[520px]"
-            src={mediaUrl}
-          >
-            Your browser does not support the video tag.
-          </video>
+          {/* Phone-style 9:16 frame — always vertical for Shorts / TikTok */}
+          <div className="w-full max-w-[280px] overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-black shadow-inner ring-1 ring-black/10 sm:max-w-[320px]">
+            <video
+              key={mediaUrl}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={`Preview of ${title}`}
+              className="aspect-[9/16] h-auto max-h-[70vh] w-full bg-black object-contain"
+              src={mediaUrl}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
         </div>
       ) : null}
     </article>
