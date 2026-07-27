@@ -18,6 +18,23 @@ DOWNLOADS_DIR = Path(__file__).resolve().parent.parent / "downloads"
 # Best video + best audio, capped at 1080p; fall back to best combined ≤1080p
 FORMAT_SELECTOR = "bv*[height<=1080]+ba/b[height<=1080]"
 
+# Sprint #6A — yt-dlp-native resilience (finite retries; no outer job loops).
+# retry_sleep_functions matches CLI: --retry-sleep linear=1::2
+# and --retry-sleep fragment:exp=1:20 (see yt-dlp YoutubeDL docs).
+_DOWNLOAD_SOCKET_TIMEOUT = 30
+_DOWNLOAD_RETRIES = 10
+_DOWNLOAD_FRAGMENT_RETRIES = 10
+
+
+def _http_retry_sleep(attempt: int) -> float:
+    """Linear backoff: 1, 3, 5, … seconds (CLI linear=1::2)."""
+    return 1.0 + 2.0 * float(attempt)
+
+
+def _fragment_retry_sleep(attempt: int) -> float:
+    """Exponential backoff capped at 20s (CLI fragment:exp=1:20)."""
+    return min(1.0 * (2.0 ** float(attempt)), 20.0)
+
 
 def _format_exception_chain(exc: BaseException) -> str:
     """Flatten __cause__ / __context__ for log lines (diagnostics only)."""
@@ -95,6 +112,14 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
         "noplaylist": True,
         "quiet": False,
         "no_warnings": False,
+        # Sprint #6A — finite yt-dlp-native resilience (no outer job retries).
+        "socket_timeout": _DOWNLOAD_SOCKET_TIMEOUT,
+        "retries": _DOWNLOAD_RETRIES,
+        "fragment_retries": _DOWNLOAD_FRAGMENT_RETRIES,
+        "retry_sleep_functions": {
+            "http": _http_retry_sleep,
+            "fragment": _fragment_retry_sleep,
+        },
     }
 
     cookie_path = resolve_youtube_cookiefile()
