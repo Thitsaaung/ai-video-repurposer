@@ -7,6 +7,8 @@ from urllib.parse import parse_qs, urlparse
 
 from fastapi import HTTPException
 
+from app.core.user_errors import INVALID_YOUTUBE_LINK_MESSAGE
+
 _UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -36,24 +38,25 @@ def assert_youtube_url(url: str) -> str:
     """
     Return ``url`` if it is a supported YouTube link; otherwise raise ValueError.
 
-    Safe to use inside Pydantic field validators.
+    Safe to use inside Pydantic field validators. Client-facing message is
+    intentionally generic (see ``user_errors.INVALID_YOUTUBE_LINK_MESSAGE``).
     """
     raw = (url or "").strip()
     if not raw:
-        raise ValueError("A YouTube URL is required")
+        raise ValueError(INVALID_YOUTUBE_LINK_MESSAGE)
 
     parsed = urlparse(raw)
     if parsed.scheme not in {"http", "https"}:
-        raise ValueError("URL must start with http:// or https://")
+        raise ValueError(INVALID_YOUTUBE_LINK_MESSAGE)
 
     host = (parsed.hostname or "").lower()
     if host not in _YOUTUBE_HOSTS:
-        raise ValueError("Only YouTube URLs are supported")
+        raise ValueError(INVALID_YOUTUBE_LINK_MESSAGE)
 
     if host in {"youtu.be", "www.youtu.be"}:
         video_id = parsed.path.strip("/").split("/")[0]
         if not video_id:
-            raise ValueError("Missing YouTube video id")
+            raise ValueError(INVALID_YOUTUBE_LINK_MESSAGE)
         return raw
 
     query_id = parse_qs(parsed.query).get("v", [None])[0]
@@ -64,4 +67,4 @@ def assert_youtube_url(url: str) -> str:
     if len(parts) >= 2 and parts[0] in {"shorts", "embed", "live", "v", "watch"}:
         return raw
 
-    raise ValueError("Could not find a YouTube video id in the URL")
+    raise ValueError(INVALID_YOUTUBE_LINK_MESSAGE)

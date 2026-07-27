@@ -6,6 +6,7 @@ import logging
 import threading
 
 from app.core.enums import JobStatus
+from app.core.user_errors import to_user_facing_error
 from app.services import job_store
 from services.engine import process_video_to_clips
 
@@ -14,10 +15,6 @@ logger = logging.getLogger(__name__)
 # Serialize pipeline runs so shared temp files (temp.srt / temp_audio.mp3)
 # are not corrupted by concurrent BackgroundTasks — without changing the engine.
 _pipeline_lock = threading.Lock()
-
-_CLIENT_FAILURE_MESSAGE = (
-    "Video processing failed. Please try again or use a different YouTube URL."
-)
 
 
 def process_video_job(job_id: str, url: str) -> None:
@@ -56,7 +53,7 @@ def process_video_job(job_id: str, url: str) -> None:
         job_store.update_job(
             job_id,
             status=JobStatus.FAILED,
-            error=_CLIENT_FAILURE_MESSAGE,
+            error=to_user_facing_error(message),
         )
 
     except Exception as exc:
@@ -64,5 +61,5 @@ def process_video_job(job_id: str, url: str) -> None:
         job_store.update_job(
             job_id,
             status=JobStatus.FAILED,
-            error=_CLIENT_FAILURE_MESSAGE,
+            error=to_user_facing_error(str(exc)),
         )
