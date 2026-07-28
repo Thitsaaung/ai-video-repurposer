@@ -11,7 +11,7 @@ export default function VideoForm({
 }: VideoFormProps) {
   return (
     <form
-      className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch"
+      className="flex w-full flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         if (disabled) return;
@@ -21,25 +21,35 @@ export default function VideoForm({
         onSubmit(url);
       }}
     >
-      <label className="sr-only" htmlFor="youtube-url">
-        YouTube URL
-      </label>
-      <input
-        id="youtube-url"
-        name="url"
-        type="url"
-        required
-        disabled={disabled}
-        placeholder="https://www.youtube.com/watch?v=..."
-        className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--muted)] focus:ring-2 disabled:opacity-60"
-      />
-      <button
-        type="submit"
-        disabled={disabled}
-        className="rounded-lg bg-[var(--accent)] px-5 py-3 font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[12.5rem]"
+      <label
+        htmlFor="youtube-url"
+        className="text-sm font-medium text-[var(--ink)]"
       >
-        {disabled ? "Processing your video…" : "Generate Clips"}
-      </button>
+        Paste a public YouTube URL
+      </label>
+
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch">
+        <input
+          id="youtube-url"
+          name="url"
+          type="url"
+          required
+          disabled={disabled}
+          placeholder="https://www.youtube.com/watch?v=..."
+          className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--muted)] focus:ring-2 disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={disabled}
+          className="rounded-lg bg-[var(--accent)] px-5 py-3 font-medium text-[var(--accent-ink)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[12.5rem]"
+        >
+          {disabled ? "Processing your video…" : "Generate Clips"}
+        </button>
+      </div>
+
+      <p className="text-xs leading-relaxed text-[var(--muted)] sm:text-sm">
+        No signup required · Free beta · Usually finishes in 2–5 minutes
+      </p>
     </form>
   );
 }

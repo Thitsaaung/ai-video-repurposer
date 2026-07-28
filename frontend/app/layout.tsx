@@ -14,8 +14,9 @@ const sans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "AI Video Repurposer",
-  description: "Turn long YouTube videos into short vertical clips.",
+  title: "T-Clipper",
+  description:
+    "Turn YouTube videos into ready-to-post vertical clips with AI.",
 };
 
 export default function RootLayout({

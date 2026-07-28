@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Callable
 from typing import Any
 
 from services.curator import curate_clips
@@ -12,10 +13,24 @@ from services.video_cutter import process_all_curated_clips
 
 logger = logging.getLogger(__name__)
 
+ProgressCallback = Callable[[str], None]
 
-def process_video_to_clips(video_url: str) -> dict[str, Any]:
+
+def _emit_progress(on_progress: ProgressCallback | None, stage: str) -> None:
+    if on_progress is not None:
+        on_progress(stage)
+
+
+def process_video_to_clips(
+    video_url: str,
+    on_progress: ProgressCallback | None = None,
+) -> dict[str, Any]:
     """
     End-to-end engine: ingest a video URL, curate clips, cut them, return results.
+
+    Optional ``on_progress(stage)`` receives stage names only
+    (``downloading``, ``transcribing``, ``curating``, ``creating_clips``).
+    The engine does not know about HTTP, jobs, or storage.
 
     Success:
         ``{
@@ -38,13 +53,14 @@ def process_video_to_clips(video_url: str) -> dict[str, Any]:
         # Ingestion covers download + Whisper transcription + sanitized JSON
         logger.info("[1/4] Downloading...")
         logger.info("[2/4] Transcribing...")
-        ingestion = run_ingestion_pipeline(url)
+        ingestion = run_ingestion_pipeline(url, on_progress=on_progress)
         video_path = ingestion["video_path"]
         sanitized_path = ingestion["sanitized_transcript_path"]
         logger.info("[1/4] Download complete → %s", video_path)
         logger.info("[2/4] Transcript ready → %s", sanitized_path)
 
         logger.info("[3/4] Curating with AI...")
+        _emit_progress(on_progress, "curating")
         curation = curate_clips(sanitized_path)
         curated_json_path = curation.get("curated_path")
         clips = curation.get("clips") or []
@@ -60,6 +76,7 @@ def process_video_to_clips(video_url: str) -> dict[str, Any]:
         logger.info("[4/4] Cutting clips from this run's video + curated JSON...")
         logger.info("[4/4] video_path=%s", video_path)
         logger.info("[4/4] curated_json_path=%s", curated_json_path)
+        _emit_progress(on_progress, "creating_clips")
         output_clip_paths = process_all_curated_clips(
             video_path=video_path,
             curated_json_path=curated_json_path,

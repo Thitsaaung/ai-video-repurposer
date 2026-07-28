@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Job } from "@/types/job";
-import { isTerminalStatus } from "@/types/job";
+import type { Job, ProcessingStage } from "@/types/job";
+import { isProcessingStage, isTerminalStatus } from "@/types/job";
 import {
   truncateUrl,
   youtubeThumbnailUrl,
 } from "@/app/lib/youtube";
 import Card from "./Card";
+import { CheckIcon } from "./icons";
 import LoadingSpinner from "./LoadingSpinner";
 import SectionTitle from "./SectionTitle";
 import StatusBadge from "./StatusBadge";
@@ -20,13 +21,105 @@ type JobStatusProps = {
   isRestoring?: boolean;
 };
 
-/** Honest overview of the pipeline — not live stage tracking. */
+/** Fallback overview when backend stage is missing — not live tracking. */
 const PROCESS_STEPS = [
   "Downloading your video…",
   "Listening to the audio…",
   "Finding the best moments…",
   "Creating your short clips…",
 ] as const;
+
+/** Backend stage → user-facing label. Backend remains source of truth. */
+const STAGE_LABELS: Record<ProcessingStage, string> = {
+  downloading: "Downloading video...",
+  transcribing: "Transcribing audio...",
+  curating: "Finding the best highlights...",
+  creating_clips: "Creating your clips...",
+};
+
+const STAGE_ORDER: readonly ProcessingStage[] = [
+  "downloading",
+  "transcribing",
+  "curating",
+  "creating_clips",
+] as const;
+
+function StageIndicator({
+  state,
+}: {
+  state: "done" | "current" | "upcoming";
+}) {
+  if (state === "done") {
+    return (
+      <span
+        aria-hidden
+        className="flex h-5 w-5 shrink-0 items-center justify-center text-[var(--accent)]"
+      >
+        <CheckIcon className="h-4 w-4" />
+      </span>
+    );
+  }
+
+  if (state === "current") {
+    return (
+      <span
+        aria-hidden
+        className="flex h-5 w-5 shrink-0 items-center justify-center"
+      >
+        <span className="processing-glow-dot h-2.5 w-2.5 rounded-full bg-[var(--accent)] ring-2 ring-[var(--accent)]/25" />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden
+      className="flex h-5 w-5 shrink-0 items-center justify-center"
+    >
+      <span className="h-2.5 w-2.5 rounded-full border border-[var(--line)] bg-transparent" />
+    </span>
+  );
+}
+
+function LiveStageList({ activeStage }: { activeStage: ProcessingStage }) {
+  const activeIndex = STAGE_ORDER.indexOf(activeStage);
+
+  return (
+    <ol className="mt-6 space-y-5">
+      {STAGE_ORDER.map((stageId, index) => {
+        const label = STAGE_LABELS[stageId];
+        const isCurrent = index === activeIndex;
+        const isDone = index < activeIndex;
+        const state = isCurrent ? "current" : isDone ? "done" : "upcoming";
+
+        return (
+          <li
+            key={stageId}
+            aria-current={isCurrent ? "step" : undefined}
+            className={`flex items-center gap-3 text-base ${
+              isCurrent
+                ? "font-semibold text-[var(--ink)]"
+                : isDone
+                  ? "text-[var(--muted)]"
+                  : "text-[var(--muted)]/80"
+            }`}
+          >
+            <StageIndicator state={state} />
+            <span className="leading-snug">
+              {label}
+              {isDone ? (
+                <span className="sr-only"> (completed)</span>
+              ) : null}
+              {isCurrent ? (
+                <span className="sr-only"> (in progress)</span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 function formatElapsed(totalSeconds: number): string {
   const safe = Math.max(0, totalSeconds);
@@ -122,16 +215,27 @@ export default function JobStatusPanel({
   if (!job) {
     return (
       <Card className="border-dashed px-6 py-10 text-[var(--muted)]">
-        <p className="text-lg text-[var(--ink)]">Ready when you are</p>
+        <p className="text-lg text-[var(--ink)]">Your clips will appear here.</p>
         <p className="mt-3 max-w-md text-sm leading-relaxed">
-          Paste a YouTube link above and we’ll create short vertical clips you
-          can preview and download.
+          Paste a YouTube video and T-Clipper will automatically:
         </p>
+        <ul className="mt-3 max-w-md space-y-1.5 text-sm leading-relaxed">
+          <li>• Find the best highlights</li>
+          <li>• Generate subtitles</li>
+          <li>• Create vertical clips</li>
+          <li>• Let you preview before downloading</li>
+        </ul>
       </Card>
     );
   }
 
   const videoUrl = (job.url || "").trim();
+  // Live stages only while processing; queued / missing stage keep static overview.
+  const activeStage =
+    job.status === "processing" && isProcessingStage(job.stage)
+      ? job.stage
+      : null;
+  const activeStageLabel = activeStage ? STAGE_LABELS[activeStage] : null;
 
   // —— Processing: premium wait experience ——
   if (isActive) {
@@ -169,6 +273,9 @@ export default function JobStatusPanel({
               ? "Still working — larger videos can take longer."
               : "This usually takes 2–5 minutes."}
           </p>
+          {activeStageLabel ? (
+            <p className="sr-only">Current step: {activeStageLabel}</p>
+          ) : null}
         </div>
 
         {videoUrl ? (
@@ -178,23 +285,35 @@ export default function JobStatusPanel({
         ) : null}
 
         <div className="mt-12">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+          <p
+            id="processing-steps-heading"
+            className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]"
+          >
             What we’re doing
           </p>
-          <ol className="mt-6 space-y-5">
-            {PROCESS_STEPS.map((step) => (
-              <li
-                key={step}
-                className="flex items-center gap-4 text-base text-[var(--ink)]"
-              >
-                <span
-                  aria-hidden
-                  className="processing-glow-dot h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]"
-                />
-                <span className="leading-snug">{step}</span>
-              </li>
-            ))}
-          </ol>
+          {activeStage ? (
+            <div aria-labelledby="processing-steps-heading">
+              <LiveStageList activeStage={activeStage} />
+            </div>
+          ) : (
+            <ol
+              className="mt-6 space-y-5"
+              aria-labelledby="processing-steps-heading"
+            >
+              {PROCESS_STEPS.map((step) => (
+                <li
+                  key={step}
+                  className="flex items-center gap-4 text-base text-[var(--ink)]"
+                >
+                  <span
+                    aria-hidden
+                    className="processing-glow-dot h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]"
+                  />
+                  <span className="leading-snug">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
 
         {connectionWarning ? (

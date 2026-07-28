@@ -2,8 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import ClipList from "./components/ClipList";
+import HowItWorks from "./components/HowItWorks";
 import JobStatusPanel from "./components/JobStatus";
 import LoadingSpinner from "./components/LoadingSpinner";
+import SiteFooter from "./components/SiteFooter";
+import TrustBenefits from "./components/TrustBenefits";
+import ValueProps from "./components/ValueProps";
 import VideoForm from "./components/VideoForm";
 import { useVideoJob } from "./hooks/useVideoJob";
 import { notify } from "./lib/notify";
@@ -68,42 +72,65 @@ export default function HomePage() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--wash)_0%,_transparent_55%),linear-gradient(160deg,_var(--bg)_0%,_var(--bg-deep)_100%)]"
       />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-start gap-10 px-6 py-14 sm:max-w-3xl sm:gap-12 sm:py-20">
-        <header className="space-y-3">
-          <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight text-[var(--ink)] sm:text-5xl">
-            AI Video Repurposer
-          </h1>
-          <p className="max-w-xl text-base leading-relaxed text-[var(--muted)] sm:text-lg">
-            Paste a YouTube URL to generate short vertical clips automatically.
-          </p>
-        </header>
+      <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col px-6 py-14 sm:max-w-3xl sm:py-20">
+        <div className="flex flex-1 flex-col gap-14 sm:gap-16">
+          <header className="max-w-lg space-y-3 sm:space-y-3.5">
+            <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight text-[var(--ink)] sm:text-5xl">
+              T-Clipper
+            </h1>
+            <p className="text-xl font-medium leading-snug text-[var(--ink)] sm:text-2xl">
+              Turn Any YouTube Video into Viral Short Clips in Minutes
+            </p>
+            <p className="text-base leading-relaxed text-[var(--muted)] sm:text-[1.05rem]">
+              Save hours of editing.
+              <br />
+              AI automatically finds the best moments and turns them into
+              vertical clips ready for TikTok, Reels and Shorts.
+            </p>
+            <div className="pt-1">
+              <ValueProps />
+            </div>
+          </header>
 
-        <VideoForm onSubmit={submit} disabled={isBusy} />
+          <section className="space-y-5" aria-label="Create clips">
+            <VideoForm onSubmit={submit} disabled={isBusy} />
 
-        {isSubmitting ? (
-          <LoadingSpinner label="Starting your job…" />
-        ) : null}
+            {isSubmitting ? (
+              <LoadingSpinner label="Starting your job…" />
+            ) : null}
 
-        {error ? (
-          <p
-            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
+            {error ? (
+              <p
+                className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+          </section>
 
-        <JobStatusPanel
-          job={job}
-          lastUpdated={lastUpdated}
-          isPolling={isPolling}
-          connectionWarning={connectionWarning}
-          isRestoring={isRestoring}
-        />
+          <section className="space-y-10" aria-label="Job and results">
+            <JobStatusPanel
+              job={job}
+              lastUpdated={lastUpdated}
+              isPolling={isPolling}
+              connectionWarning={connectionWarning}
+              isRestoring={isRestoring}
+            />
 
-        {job?.status === "completed" ? (
-          <ClipList ref={resultsRef} paths={job.output_clip_paths} />
-        ) : null}
+            {job?.status === "completed" ? (
+              <ClipList ref={resultsRef} paths={job.output_clip_paths} />
+            ) : null}
+          </section>
+
+          <HowItWorks />
+
+          <TrustBenefits />
+        </div>
+
+        <div className="mt-16 sm:mt-20">
+          <SiteFooter />
+        </div>
       </div>
     </main>
   );

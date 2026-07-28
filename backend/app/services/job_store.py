@@ -12,6 +12,16 @@ from app.core.enums import JobStatus
 
 logger = logging.getLogger(__name__)
 
+# Optional progress detail while status == processing. Cleared on terminal states.
+ALLOWED_STAGES = frozenset(
+    {
+        "downloading",
+        "transcribing",
+        "curating",
+        "creating_clips",
+    }
+)
+
 # job_id → job dict. Cleared when the process restarts.
 _jobs: dict[str, dict[str, Any]] = {}
 _lock = threading.RLock()
@@ -29,6 +39,7 @@ def create_job(url: str) -> dict[str, Any]:
         "curated_json_path": None,
         "output_clip_paths": None,
         "error": None,
+        "stage": None,
     }
     with _lock:
         _jobs[job_id] = job
@@ -48,7 +59,7 @@ def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
     Merge ``fields`` into an existing job.
 
     Allowed extras: ``status``, ``video_path``, ``curated_json_path``,
-    ``output_clip_paths``, ``error``. Returns updated copy or ``None``.
+    ``output_clip_paths``, ``error``, ``stage``. Returns updated copy or ``None``.
     """
     with _lock:
         job = _jobs.get(job_id)
@@ -61,6 +72,7 @@ def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
             "curated_json_path",
             "output_clip_paths",
             "error",
+            "stage",
         }
         for key, value in fields.items():
             if key not in allowed:
@@ -70,6 +82,8 @@ def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
                     value = value.value
                 elif value not in {s.value for s in JobStatus}:
                     raise ValueError(f"Unsupported job status: {value}")
+            if key == "stage" and value is not None and value not in ALLOWED_STAGES:
+                raise ValueError(f"Unsupported job stage: {value}")
             job[key] = value
 
         logger.debug(

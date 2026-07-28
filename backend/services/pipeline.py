@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -14,6 +15,13 @@ from services.transcriber import TRANSCRIPTS_DIR, transcribe_video
 from services.video_downloader import download_video
 
 logger = logging.getLogger(__name__)
+
+ProgressCallback = Callable[[str], None]
+
+
+def _emit_progress(on_progress: ProgressCallback | None, stage: str) -> None:
+    if on_progress is not None:
+        on_progress(stage)
 
 # Filename pattern from video_downloader: "Title [id].ext"
 _FILENAME_ID_RE = re.compile(r"\[([^\]]+)\]$")
@@ -62,9 +70,15 @@ def sanitize_segments(raw_segments: list[dict[str, Any]] | None) -> list[dict[st
     return cleaned
 
 
-def run_ingestion_pipeline(video_url: str) -> dict[str, str]:
+def run_ingestion_pipeline(
+    video_url: str,
+    on_progress: ProgressCallback | None = None,
+) -> dict[str, str]:
     """
     Download ``video_url``, transcribe with Whisper, and save a sanitized transcript.
+
+    Optional ``on_progress(stage)`` is called with pipeline stage names
+    (``downloading``, ``transcribing``). Callers may ignore it (CLI).
 
     Returns:
         ``{"video_path": ..., "sanitized_transcript_path": ...}``
@@ -74,11 +88,13 @@ def run_ingestion_pipeline(video_url: str) -> dict[str, str]:
 
     try:
         logger.info("Step 1/3 — downloading video")
+        _emit_progress(on_progress, "downloading")
         video_path = download_video(video_url)
         video_id = _extract_video_id(video_url, video_path)
         logger.info("Downloaded %s (id=%s)", video_path, video_id)
 
         logger.info("Step 2/3 — transcribing with Whisper")
+        _emit_progress(on_progress, "transcribing")
         # Skip the intermediate transcript file; pipeline writes the sanitized one
         transcript = transcribe_video(video_path, save_json=False)
 

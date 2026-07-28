@@ -41,6 +41,7 @@ class JobResponse(BaseModel):
     curated_json_path: str | None = None
     output_clip_paths: list[str] | None = None
     error: str | None = None
+    stage: str | None = None
 
 
 @router.post("/process-video", response_model=JobResponse)

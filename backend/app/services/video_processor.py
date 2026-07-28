@@ -22,7 +22,9 @@ def process_video_job(job_id: str, url: str) -> None:
     Run the real video pipeline for a job (background).
 
     Status flow: ``queued`` → ``processing`` → ``completed`` | ``failed``.
-    On success, stores ``video_path``, ``curated_json_path``, ``output_clip_paths``.
+    Optional ``stage`` is updated via engine progress callbacks; cleared on
+    terminal status. On success, stores ``video_path``, ``curated_json_path``,
+    ``output_clip_paths``.
     """
     updated = job_store.update_job_status(job_id, JobStatus.PROCESSING)
     if updated is None:
@@ -31,9 +33,14 @@ def process_video_job(job_id: str, url: str) -> None:
 
     logger.info("Job %s processing started url=%s", job_id, url)
 
+    def on_progress(stage: str) -> None:
+        """Persist engine stage names onto the job (HTTP/job ownership stays here)."""
+        job_store.update_job(job_id, stage=stage)
+        logger.info("Job %s stage=%s", job_id, stage)
+
     try:
         with _pipeline_lock:
-            result = process_video_to_clips(url)
+            result = process_video_to_clips(url, on_progress=on_progress)
 
         if result.get("status") == "success":
             clip_count = len(result.get("output_clip_paths") or [])
@@ -44,6 +51,7 @@ def process_video_job(job_id: str, url: str) -> None:
                 curated_json_path=result.get("curated_json_path"),
                 output_clip_paths=result.get("output_clip_paths") or [],
                 error=None,
+                stage=None,
             )
             logger.info("Job %s completed clip_count=%s", job_id, clip_count)
             return
@@ -54,6 +62,7 @@ def process_video_job(job_id: str, url: str) -> None:
             job_id,
             status=JobStatus.FAILED,
             error=to_user_facing_error(message),
+            stage=None,
         )
 
     except Exception as exc:
@@ -62,4 +71,5 @@ def process_video_job(job_id: str, url: str) -> None:
             job_id,
             status=JobStatus.FAILED,
             error=to_user_facing_error(str(exc)),
+            stage=None,
         )
