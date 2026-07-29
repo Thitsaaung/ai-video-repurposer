@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import get_settings
 from app.core.logging_config import configure_logging
+from app.core.startup_diagnostics import run_startup_diagnostics
 from app.routes.media import router as media_router
 from app.routes.videos import router as videos_router
 
@@ -109,3 +110,5 @@ async def on_startup() -> None:
         settings.cors_origins,
         settings.output_clips_dir,
     )
+    # Temporary Railway diagnostics only — does not affect request handling.
+    run_startup_diagnostics()

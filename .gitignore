@@ -91,3 +91,11 @@ Desktop.ini
 
 # Logs
 *.log
+
+backend/downloads/
+backend/output_clips/
+backend/temp/
+*.mp4
+*.webm
+*.wav
+*.srt
