@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from app.core.config import get_settings
+from services.subtitle_layout import layout_segment
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,7 @@ def generate_srt_for_clip(
         transcript = json.load(f)
 
     segments = transcript.get("segments") or []
+    # (rel_start, rel_end, cue_body_with_newlines)
     entries: list[tuple[float, float, str]] = []
 
     for seg in segments:
@@ -185,11 +187,18 @@ def generate_srt_for_clip(
         if seg_end <= clip_start_f or seg_start >= clip_end_f:
             continue
 
-        rel_start = max(seg_start, clip_start_f) - clip_start_f
-        rel_end = min(seg_end, clip_end_f) - clip_start_f
-        if rel_end <= rel_start:
+        # Layout uses the clipped absolute window so times stay inside the clip.
+        abs_start = max(seg_start, clip_start_f)
+        abs_end = min(seg_end, clip_end_f)
+        if abs_end <= abs_start:
             continue
-        entries.append((rel_start, rel_end, text))
+
+        for cue in layout_segment(abs_start, abs_end, text):
+            rel_start = cue.start - clip_start_f
+            rel_end = cue.end - clip_start_f
+            if rel_end <= rel_start:
+                continue
+            entries.append((rel_start, rel_end, cue.text))
 
     srt_path = Path(output_srt_path)
     if not srt_path.is_absolute():

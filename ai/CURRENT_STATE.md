@@ -41,6 +41,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - [x] CLI / offline engine (`python -m services.engine`)
 - [x] FastAPI job API (submit, poll, media serving)
 - [x] Next.js frontend (submit URL, job status, clip preview/download)
+- [x] Subtitle Layout Engine (≤3 lines, phrase-aware SRT cues)
 
 ---
 
@@ -101,17 +102,17 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - Railway backend production reliability
 - Vercel frontend deployment pairing
 - Cookie / download resilience for cloud environments
-- Documentation foundation (TOS: `docs/PROJECT.md`, `ai/*`)
+- Subtitle preset bake-off review (Founder chooses A–E default)
 
 ---
 
 ## Next Milestones
 
-1. Stable Closed Beta: frontend (Vercel) + backend (Railway) reliably process speech-heavy videos
-2. Auth + persistent storage (Supabase or approved alternative)
-3. Durable jobs / worker path when concurrency or restarts demand it
-4. Measurable AI quality loop (prompt evals on known source videos)
-5. Billing / plan gates (post-auth)
+1. Apply chosen subtitle style preset after Founder decision
+2. Stable Closed Beta: frontend (Vercel) + backend (Railway) reliably process speech-heavy videos
+3. Auth + persistent storage (Supabase or approved alternative)
+4. Durable jobs / worker path when concurrency or restarts demand it
+5. Measurable AI quality loop (prompt evals on known source videos)
 
 ---
 
@@ -138,8 +139,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 - **Stack:** FastAPI + modular `services/` pipeline
 - **API:** Process video, job status, media/clips
-- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`
-- **Gaps:** Durable queue, auth, multi-tenant isolation, long-video Whisper chunking
+- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in
+- **Gaps:** Durable queue, auth, multi-tenant isolation, long-video Whisper chunking; char budget not yet tied to FontSize preset
 
 ---
 
@@ -168,7 +169,43 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 ## Last Updated
 
-**2026-07-29**
+**2026-07-30**
+
+---
+
+## MVP Success Dashboard
+
+Daily Jobs
+
+Daily Active Users
+
+Average Processing Time
+
+Success Rate
+
+Failed Jobs
+
+Average Cost per Job
+
+Average Clip Rating
+
+Average Queue Time
+
+---
+
+## Current Sprint
+
+Sprint Goal
+
+Sprint Start
+
+Sprint End
+
+Sprint Tasks
+
+Blocked Tasks
+
+Completed Tasks
 
 ---
 
@@ -182,3 +219,47 @@ When finishing a session, update:
 4. **Deployment / Frontend / Backend / Infrastructure Status** if anything changed
 5. **Last Updated** date
 6. Add a corresponding entry to `ai/DECISIONS.md` if an important decision was made
+
+## Related Documents
+
+- PROJECT.md
+- DECISIONS.md
+- RULES.md
+
+--- 
+
+## Business Readiness
+
+Authentication
+
+60%
+
+Billing
+
+0%
+
+Subscriptions
+
+0%
+
+Email
+
+0%
+
+Analytics
+
+20%
+
+Support
+
+0%
+
+---
+
+## Target Release
+
+- Closed Beta
+- Expected Users
+- 50
+- 100
+- 500
