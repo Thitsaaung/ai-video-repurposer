@@ -31,7 +31,7 @@ DOWNLOADS_DIR = PROJECT_ROOT / "downloads"
 # - Slightly smaller FontSize + modest side margins prefer ~2-line wraps over
 #   tall 3–4 line stacks (without changing SRT cue text or timing).
 _SUBTITLE_FORCE_STYLE = (
-    "FontSize=24,"
+    "FontSize=22,"
     "Bold=1,"
     "PrimaryColour=&H00FFFFFF,"
     "OutlineColour=&H00000000,"
