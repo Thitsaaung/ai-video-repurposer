@@ -26,6 +26,19 @@ _DOWNLOAD_SOCKET_TIMEOUT = 30
 _DOWNLOAD_RETRIES = 10
 _DOWNLOAD_FRAGMENT_RETRIES = 10
 
+# Stable Chrome desktop UA — cookies are typically exported from a browser;
+# pairing them with yt-dlp's default UA looks more automated on cloud IPs.
+_CHROME_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
+
+# Light pacing only — enough to reduce bursty extract/request patterns on
+# Railway without making single-video downloads feel slow.
+_SLEEP_INTERVAL_REQUESTS_S = 1.0
+_SLEEP_INTERVAL_S = 1.0
+
 
 def _http_retry_sleep(attempt: int) -> float:
     """Linear backoff: 1, 3, 5, … seconds (CLI linear=1::2)."""
@@ -234,6 +247,12 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
             "http": _http_retry_sleep,
             "fragment": _fragment_retry_sleep,
         },
+        # Minimal browser identity + light request pacing (429 mitigation).
+        "http_headers": {
+            "User-Agent": _CHROME_USER_AGENT,
+        },
+        "sleep_interval_requests": _SLEEP_INTERVAL_REQUESTS_S,
+        "sleep_interval": _SLEEP_INTERVAL_S,
     }
 
     cookie_path = resolve_youtube_cookiefile()

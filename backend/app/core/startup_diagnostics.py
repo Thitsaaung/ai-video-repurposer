@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import glob
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -84,9 +85,22 @@ def _resolve_diag_cookiefile() -> str | None:
 
 
 def run_startup_diagnostics() -> None:
-    """Run temporary toolchain + cookie list-formats probes. Never raises."""
+    """
+    Temporary toolchain + optional YouTube list-formats probes.
+
+    Gated by ``DIAG_YTDLP=true`` so normal production startup never contacts
+    YouTube (and skips this suite entirely). Never raises.
+    """
+    flag = (os.environ.get("DIAG_YTDLP") or "").strip().lower()
+    if flag not in {"1", "true", "yes", "on"}:
+        logger.info(
+            "DIAG startup: skipped (set DIAG_YTDLP=true to enable; "
+            "avoids YouTube contact on normal production boot)",
+        )
+        return
+
     print("[DIAG startup] begin temporary diagnostics", flush=True)
-    logger.info("DIAG startup: begin temporary diagnostics")
+    logger.info("DIAG startup: begin temporary diagnostics (DIAG_YTDLP enabled)")
 
     try:
         _run_captured(["yt-dlp", "--version"], timeout_s=30.0)

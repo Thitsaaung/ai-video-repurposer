@@ -110,5 +110,5 @@ async def on_startup() -> None:
         settings.cors_origins,
         settings.output_clips_dir,
     )
-    # Temporary Railway diagnostics only — does not affect request handling.
+    # Optional diagnostics — skipped unless DIAG_YTDLP=true (no YouTube on boot).
     run_startup_diagnostics()
