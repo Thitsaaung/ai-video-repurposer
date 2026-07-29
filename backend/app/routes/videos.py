@@ -37,6 +37,7 @@ class JobResponse(BaseModel):
     status: JobStatus
     url: str
     created_at: str
+    updated_at: str | None = None
     video_path: str | None = None
     curated_json_path: str | None = None
     output_clip_paths: list[str] | None = None

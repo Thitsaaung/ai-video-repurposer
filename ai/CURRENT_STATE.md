@@ -42,6 +42,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - [x] FastAPI job API (submit, poll, media serving)
 - [x] Next.js frontend (submit URL, job status, clip preview/download)
 - [x] Subtitle Layout Engine (≤3 lines, phrase-aware SRT cues)
+- [x] Automatic storage cleanup / retention (downloads, temps, clips, expired jobs)
 
 ---
 
@@ -56,7 +57,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 | Validator | `backend/services/clip_validator.py` | Deterministic |
 | Cutter | `backend/services/video_cutter.py` | FFmpeg + captions |
 | HTTP API | `backend/app/` | FastAPI |
-| Job store | In-memory (process-local) | Not durable across restarts |
+| Job store | In-memory (process-local) | Not durable across restarts; expired terminal jobs purged by cleanup |
+| Storage cleanup | `app/services/storage_cleanup.py` | Startup + interval; configurable retention env vars |
 | Frontend | `frontend/` | Next.js 15 App Router |
 
 ---
@@ -78,7 +80,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 - In-memory job store (no Redis/DB-backed queue yet)
 - No authentication / multi-tenancy
-- No durable clip library or object storage abstraction
+- No durable clip library or object storage abstraction (local retention cleanup mitigates disk fill)
 - Whisper chunking for long videos not implemented
 - Optional Node/JS runtime still relevant for some yt-dlp YouTube challenges
 - Repo / product naming mix (`ai-video-repurposer` vs `T-Clipper`) in places
@@ -140,7 +142,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 - **Stack:** FastAPI + modular `services/` pipeline
 - **API:** Process video, job status, media/clips
-- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in
+- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in; automatic storage cleanup with configurable retention
 - **Gaps:** Durable queue, auth, multi-tenant isolation, long-video Whisper chunking; char budget not yet tied to FontSize preset
 
 ---
@@ -151,7 +153,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 |------|--------|
 | Secrets via env (OpenAI, cookies, CORS) | In use |
 | FFmpeg on Railway | Required (`RAILPACK_DEPLOY_APT_PACKAGES=ffmpeg`) |
-| Object storage / CDN for clips | Not yet |
+| Object storage / CDN for clips | Not yet (local retention cleanup enabled — DEC-019) |
 | Observability / alerting | Minimal (logs) |
 | CI gates | Not a current focus unless already present |
 
@@ -163,14 +165,15 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 2. **Cookie leakage** if Netscape cookies are committed or logged (mitigated: `*cookies*.txt` gitignored; rotate if ever leaked)
 3. **API cost spikes** (Whisper + LLM) on long or frequent jobs
 4. **Ephemeral jobs** confuse users after redeploys
-5. **Scope creep** into vision/gaming/architecture rewrites before MVP reliability
-6. **Breaking API changes** that desync frontend and backend
+5. **Disk fill** mitigated by retention cleanup; still no object storage / CDN
+6. **Scope creep** into vision/gaming/architecture rewrites before MVP reliability
+7. **Breaking API changes** that desync frontend and backend
 
 ---
 
 ## Last Updated
 
-**2026-07-30** (cookie secret gitignore + `docs/cookies_secret_management.md`)
+**2026-07-30** (storage cleanup / retention — DEC-019)
 
 ---
 

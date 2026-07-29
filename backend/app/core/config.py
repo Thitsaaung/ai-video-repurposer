@@ -74,6 +74,64 @@ class Settings(BaseSettings):
         ),
     )
 
+    # Storage cleanup / retention (disk hygiene for downloads, temps, clips).
+    storage_cleanup_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "STORAGE_CLEANUP_ENABLED",
+            "storage_cleanup_enabled",
+        ),
+    )
+    storage_cleanup_interval_minutes: float = Field(
+        default=30.0,
+        validation_alias=AliasChoices(
+            "STORAGE_CLEANUP_INTERVAL_MINUTES",
+            "storage_cleanup_interval_minutes",
+        ),
+    )
+    storage_downloads_retention_hours: float = Field(
+        default=24.0,
+        validation_alias=AliasChoices(
+            "STORAGE_DOWNLOADS_RETENTION_HOURS",
+            "storage_downloads_retention_hours",
+        ),
+    )
+    storage_transcripts_retention_hours: float = Field(
+        default=24.0,
+        validation_alias=AliasChoices(
+            "STORAGE_TRANSCRIPTS_RETENTION_HOURS",
+            "storage_transcripts_retention_hours",
+        ),
+    )
+    storage_clips_retention_hours: float = Field(
+        default=48.0,
+        validation_alias=AliasChoices(
+            "STORAGE_CLIPS_RETENTION_HOURS",
+            "storage_clips_retention_hours",
+        ),
+    )
+    storage_temp_retention_hours: float = Field(
+        default=1.0,
+        validation_alias=AliasChoices(
+            "STORAGE_TEMP_RETENTION_HOURS",
+            "storage_temp_retention_hours",
+        ),
+    )
+    storage_failed_job_retention_hours: float = Field(
+        default=12.0,
+        validation_alias=AliasChoices(
+            "STORAGE_FAILED_JOB_RETENTION_HOURS",
+            "storage_failed_job_retention_hours",
+        ),
+    )
+    storage_completed_job_retention_hours: float = Field(
+        default=48.0,
+        validation_alias=AliasChoices(
+            "STORAGE_COMPLETED_JOB_RETENTION_HOURS",
+            "storage_completed_job_retention_hours",
+        ),
+    )
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
@@ -100,6 +158,21 @@ class Settings(BaseSettings):
             raise ValueError("clip padding seconds must be >= 0")
         return float(value)
 
+    @field_validator(
+        "storage_cleanup_interval_minutes",
+        "storage_downloads_retention_hours",
+        "storage_transcripts_retention_hours",
+        "storage_clips_retention_hours",
+        "storage_temp_retention_hours",
+        "storage_failed_job_retention_hours",
+        "storage_completed_job_retention_hours",
+    )
+    @classmethod
+    def _positive_storage_numbers(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("storage retention/interval values must be > 0")
+        return float(value)
+
     @property
     def project_root(self) -> Path:
         """Application root (backend/). Kept name for existing callers."""
@@ -108,6 +181,18 @@ class Settings(BaseSettings):
     @property
     def output_clips_dir(self) -> Path:
         path = BACKEND_ROOT / "output_clips"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def downloads_dir(self) -> Path:
+        path = BACKEND_ROOT / "downloads"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def transcripts_dir(self) -> Path:
+        path = BACKEND_ROOT / "transcripts"
         path.mkdir(parents=True, exist_ok=True)
         return path
 

@@ -30,11 +30,13 @@ _lock = threading.RLock()
 def create_job(url: str) -> dict[str, Any]:
     """Create a queued job for ``url`` and store it in memory."""
     job_id = str(uuid4())
+    now = datetime.now(timezone.utc).isoformat()
     job: dict[str, Any] = {
         "job_id": job_id,
         "status": JobStatus.QUEUED.value,
         "url": url,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now,
+        "updated_at": now,
         "video_path": None,
         "curated_json_path": None,
         "output_clip_paths": None,
@@ -52,6 +54,35 @@ def get_job(job_id: str) -> dict[str, Any] | None:
     with _lock:
         job = _jobs.get(job_id)
         return dict(job) if job is not None else None
+
+
+def list_jobs() -> list[dict[str, Any]]:
+    """Return copies of all in-memory jobs."""
+    with _lock:
+        return [dict(job) for job in _jobs.values()]
+
+
+def delete_job(job_id: str) -> bool:
+    """
+    Remove a job from the registry.
+
+    Returns ``True`` if removed. Refuses to delete active (queued/processing) jobs.
+    """
+    with _lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return False
+        status = job.get("status")
+        if status in {JobStatus.QUEUED.value, JobStatus.PROCESSING.value}:
+            logger.warning(
+                "Refusing to delete active job_id=%s status=%s",
+                job_id,
+                status,
+            )
+            return False
+        del _jobs[job_id]
+        logger.info("Deleted job_id=%s status=%s", job_id, status)
+        return True
 
 
 def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
@@ -85,6 +116,8 @@ def update_job(job_id: str, **fields: Any) -> dict[str, Any] | None:
             if key == "stage" and value is not None and value not in ALLOWED_STAGES:
                 raise ValueError(f"Unsupported job stage: {value}")
             job[key] = value
+
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         logger.debug(
             "Updated job_id=%s fields=%s",

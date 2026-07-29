@@ -104,8 +104,16 @@ async def health() -> dict[str, str]:
 @app.on_event("startup")
 async def on_startup() -> None:
     logger.info(
-        "Starting %s — cors_origins=%s output_clips=%s",
+        "Starting %s — cors_origins=%s output_clips=%s cleanup_enabled=%s",
         settings.app_name,
         settings.cors_origins,
         settings.output_clips_dir,
+        settings.storage_cleanup_enabled,
     )
+    # Best-effort disk hygiene; never raises into ASGI startup.
+    try:
+        from app.services.storage_cleanup import run_startup_cleanup
+
+        run_startup_cleanup()
+    except Exception:
+        logger.exception("Storage cleanup startup failed (ignored)")

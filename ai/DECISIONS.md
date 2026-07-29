@@ -547,4 +547,33 @@ Frontend deploy docs and agent instructions assume Vercel unless superseded.
 
 ---
 
+## DEC-019 — Automatic storage cleanup with configurable retention
+
+**Decision ID:** DEC-019  
+**Title:** Automatic storage cleanup with configurable retention  
+**Date:** 2026-07-30  
+**Status:** Accepted  
+
+**Context**  
+Pipeline artifacts under `downloads/`, `transcripts/`, `output_clips/`, and shared temps grow without bound (production health check C4), risking disk exhaustion on Railway.
+
+**Decision**  
+Run a best-effort cleanup pass on API startup and on a configurable interval. Delete only files under known backend directories that are older than retention and not referenced by in-memory jobs. Never delete active (`queued` / `processing`) jobs or shared temps while any job is active. Purge expired failed/completed job records from the in-memory store.
+
+**Reason**  
+Addresses disk risk with minimal architecture change—no object storage or queue required for closed beta.
+
+**Alternatives Considered**  
+- Delete source video immediately after cut only  
+- Object storage + CDN from day one  
+- Manual ops cleanup only  
+
+**Trade-offs**  
+In-memory job protection is lost after restart (same as BUG-004); age-based orphan cleanup then applies. Retention env vars must be tuned for beta UX vs disk.
+
+**Future Impact**  
+When durable jobs/object storage land, reuse the same retention settings and protected-path rules against the durable store.
+
+---
+
 *When in doubt: add a decision here before implementing a directional change.*
