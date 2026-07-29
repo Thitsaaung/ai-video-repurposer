@@ -62,10 +62,39 @@ class TestSubtitleLayout(unittest.TestCase):
             self.assertGreaterEqual(c.end, c.start)
         self.assertAlmostEqual(cues[0].start, 0.0)
         self.assertAlmostEqual(cues[-1].end, 10.0)
-        # Sequential cues abut / monotonic
+        # Continuous: end(prev) == start(next); no gaps/overlaps
         for a, b in zip(cues, cues[1:]):
-            self.assertLessEqual(a.end, b.start + 1e-6)
-            self.assertLessEqual(a.start, b.start)
+            self.assertEqual(a.end, b.start)
+        # No missing / duplicated words vs tokenized input
+        from services.subtitle_layout import tokenize, words_from_cues
+
+        self.assertEqual(words_from_cues(cues), tokenize(text))
+
+    def test_11_safari_sample_not_six_lines(self) -> None:
+        text = (
+            "The next Safari tip we're going to talk about is called Reader. "
+            "Have you ever been on a website that is so full of ads?"
+        )
+        cues = layout_segment(0.0, 12.0, text)
+        self.assertGreaterEqual(len(cues), 2)
+        for c in cues:
+            self.assertLessEqual(len(c.lines), MAX_LINES)
+        # Must not be a single 6-line block
+        self.assertFalse(len(cues) == 1 and len(cues[0].lines) >= 6)
+        for a, b in zip(cues, cues[1:]):
+            self.assertEqual(a.end, b.start)
+        from services.subtitle_layout import tokenize, words_from_cues
+
+        self.assertEqual(words_from_cues(cues), tokenize(text))
+
+    def test_12_prefer_two_lines_when_possible(self) -> None:
+        text = "Have you ever been on a website full of ads?"
+        cues = layout_segment(0.0, 4.0, text)
+        self.assertEqual(len(cues), 1)
+        self.assertLessEqual(len(cues[0].lines), MAX_LINES)
+        self.assertGreaterEqual(len(cues[0].lines), 1)
+        # Prefer ≤2 for this medium sentence when packing works
+        self.assertLessEqual(len(cues[0].lines), 2)
 
     def test_04_comma_split(self) -> None:
         text = "Just being flooded with all that stuff, making it hard to read."
@@ -85,6 +114,8 @@ class TestSubtitleLayout(unittest.TestCase):
         self.assertLessEqual(_max_lines(cues), MAX_LINES)
         self.assertAlmostEqual(cues[0].start, 0.0)
         self.assertAlmostEqual(cues[-1].end, 6.0)
+        for a, b in zip(cues, cues[1:]):
+            self.assertEqual(a.end, b.start)
 
     def test_06_proper_noun(self) -> None:
         text = "Every stadium's best goal from the Premier League this season."

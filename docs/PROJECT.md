@@ -18,11 +18,18 @@ Internal / repository aliases may still reference “AI Video Repurposer.” Pro
 
 Help creators and content teams turn long-form video into high-quality, platform-ready short clips with minimal manual editing—so they publish more, faster, without sacrificing editorial quality.
 
+Our goal is not only to automate editing.
+
+Our goal is to help creators grow faster with less effort.
+
 ---
 
 ## Vision
 
 Become the default production system for speech-driven short-form clip creation: reliable download → accurate transcription → intelligent clip selection → vertical captioned export, delivered as a production SaaS with clear APIs, durable jobs, and creator-grade output.
+
+Become the operating system
+for AI-powered content repurposing.
 
 ---
 
@@ -68,12 +75,13 @@ Primary workflow: paste a YouTube URL → wait for processing → preview and do
 
 | Attribute | Profile |
 |-----------|---------|
-| **Who** | Creator or small team shipping weekly long-form video |
+| **Who** | Creator or small team shipping weekly long-form video | Marketing Agencies|Media Companies | Corporate Podcast Teams
 | **Content** | Speech-heavy (podcasts, interviews, tutorials, commentary) |
 | **Need** | Consistent short-form output without a full editing bench |
 | **Pain** | Hours lost to scrubbing, cropping, and captioning |
 | **Buying trigger** | Need to grow Shorts/Reels/TikTok from existing catalog |
 | **Not ideal (launch)** | Pure gameplay / visual-only highlights with sparse speech |
+
 
 ---
 
@@ -115,6 +123,11 @@ Success = usable vertical clips with readable burned-in captions and strong spok
 - Optional visual understanding for gaming / visual-only moments (explicit product decision required)
 - Vercel (or equivalent) production frontend with hardened CORS and observability
 - Queue/worker architecture when in-memory jobs are no longer enough
+- AI Thumbnail
+- AI Title
+- AI Description
+- AI Social Posts
+- AI Publishing
 
 ---
 
@@ -146,6 +159,13 @@ Processing modules live in `backend/services/` and stay decoupled from HTTP rout
 8. **No hallucinations** — Do not invent APIs, configs, or behaviors; verify against code and docs.
 9. **Backward compatibility** — Do not break job/API contracts without an explicit versioning plan.
 10. **Secrets stay secret** — Never commit keys, cookies, or credentials.
+11. Engineering Values
+12. Customer First
+13. Simple beats Clever
+14. Reliability beats Features
+15. Measure before Optimizing
+16. Documentation is Code
+17. AI Assists, Humans Decide
 
 ---
 
@@ -184,6 +204,23 @@ Qualitative bar: a speech-heavy podcast episode should yield several strong vert
 - **Editor’s instinct in software** — Prefer hooks, clarity, and complete thoughts over arbitrary cuts.
 - **Operational clarity** — Logs, errors, and job states must be diagnosable in production.
 - **UI as a control surface** — Frontend submits work and presents results; heavy lifting stays in the backend pipeline.
+
+---
+
+## Competitors
+
+- Opus Clip
+- Vizard
+- Klap
+- Munch
+- 2short.ai
+- CapCut AI
+
+---
+
+## Product Positioning
+
+Not Video Editor, Not Social Scheduler. We are AI Clip Production Platform.
 
 ---
 

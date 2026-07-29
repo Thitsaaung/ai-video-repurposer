@@ -1,0 +1,38 @@
+## short
+Input: Show Reader.
+cues=1 max_lines=1 ok_max3=True continuous=True words_intact=True
+  cue 1: 0.000 -> 12.000 (2 words)
+    | Show Reader.
+
+## medium
+Input: Have you ever been on a website full of ads?
+cues=1 max_lines=2 ok_max3=True continuous=True words_intact=True
+  cue 1: 0.000 -> 12.000 (10 words)
+    | Have you ever been on
+    | a website full of ads?
+
+## long
+Input: The next Safari tip we're going to talk about is called Reader.
+cues=1 max_lines=3 ok_max3=True continuous=True words_intact=True
+  cue 1: 0.000 -> 12.000 (12 words)
+    | The next Safari tip
+    | we're going to talk
+    | about is called Reader.
+
+## extremely_long
+Input: The next Safari tip we're going to talk about is called Reader. Have you ever been on a website that is so full of ads and banners or videos and other distractions that it is nearly impossible to focus?
+cues=4 max_lines=3 ok_max3=True continuous=True words_intact=True
+  cue 1: 0.000 -> 3.692 (12 words)
+    | The next Safari tip
+    | we're going to talk
+    | about is called Reader.
+  cue 2: 3.692 -> 6.769 (10 words)
+    | Have you ever been on
+    | a website that is so
+  cue 3: 6.769 -> 9.538 (9 words)
+    | full of ads and banners
+    | or videos and other
+  cue 4: 9.538 -> 12.000 (8 words)
+    | distractions that it is
+    | nearly impossible
+    | to focus?
