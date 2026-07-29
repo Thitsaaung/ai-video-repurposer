@@ -193,13 +193,34 @@ def resolve_youtube_cookiefile() -> str | None:
         "YOUTUBE_COOKIES_BASE64",
     )
     if encoded:
+        # Temporary diagnostics — never log cookie contents.
+        logger.info(
+            "DIAG cookie: YOUTUBE_COOKIES_BASE64_exists=True "
+            "attempting_decode=True",
+        )
         try:
             path = _write_cookies_from_base64(encoded)
         except Exception:
-            logger.exception("Failed to materialize YOUTUBE_COOKIES_BASE64")
+            logger.exception(
+                "DIAG cookie: YOUTUBE_COOKIES_BASE64_exists=True "
+                "decode_succeeded=False (Failed to materialize YOUTUBE_COOKIES_BASE64)",
+            )
             return None
+        size_bytes = path.stat().st_size if path.is_file() else None
+        logger.info(
+            "DIAG cookie: YOUTUBE_COOKIES_BASE64_exists=True "
+            "decode_succeeded=True cookie_path=%s file_exists=%s "
+            "size_bytes=%s",
+            path,
+            path.is_file(),
+            size_bytes,
+        )
         return str(path)
 
+    logger.info(
+        "DIAG cookie: YOUTUBE_COOKIES_BASE64_exists=False "
+        "decode_succeeded=False (env not set)",
+    )
     return None
 
 

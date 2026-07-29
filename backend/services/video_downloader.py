@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 
 import yt_dlp
 
-from app.core.config import resolve_youtube_cookiefile
+from app.core.config import get_settings, resolve_youtube_cookiefile
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,119 @@ def _log_download_failure(
     )
 
 
+def _youtube_cookies_base64_configured() -> bool:
+    """True when YOUTUBE_COOKIES_BASE64 is set (value never logged)."""
+    settings = get_settings()
+    if settings.youtube_cookies_base64:
+        return True
+    for key, value in os.environ.items():
+        if key.upper() == "YOUTUBE_COOKIES_BASE64":
+            return bool(isinstance(value, str) and value.strip())
+    return False
+
+
+def _log_pre_download_cookie_diagnostics(
+    *,
+    cookie_path: str | None,
+    ydl_opts: dict,
+) -> None:
+    """
+    Temporary pre-yt-dlp cookie diagnostics for Railway operators.
+
+    Never logs cookie file contents — only presence, paths, and sizes.
+    """
+    b64_exists = _youtube_cookies_base64_configured()
+    path_obj = Path(cookie_path) if cookie_path else None
+    file_exists = bool(path_obj and path_obj.is_file())
+    size_bytes: int | None
+    if file_exists and path_obj is not None:
+        try:
+            size_bytes = path_obj.stat().st_size
+        except OSError:
+            size_bytes = None
+    else:
+        size_bytes = None
+
+    cookiefile_set = "cookiefile" in ydl_opts and bool(ydl_opts.get("cookiefile"))
+    cookiefile_value = ydl_opts.get("cookiefile") if cookiefile_set else None
+
+    # Temp files from base64 use prefix yt_cookies_ (see _write_cookies_from_base64).
+    from_base64_temp = bool(
+        path_obj is not None and path_obj.name.startswith("yt_cookies_"),
+    )
+
+    if not b64_exists:
+        decode_succeeded = False
+        decode_note = "YOUTUBE_COOKIES_BASE64 not set (decode skipped)"
+    elif from_base64_temp and file_exists and size_bytes is not None and size_bytes > 0:
+        decode_succeeded = True
+        decode_note = "base64 materialized to temp cookie file"
+    elif from_base64_temp and cookie_path and not file_exists:
+        decode_succeeded = False
+        decode_note = "base64 resolve returned a path but file is missing on disk"
+    elif cookie_path and file_exists and not from_base64_temp:
+        decode_succeeded = False
+        decode_note = (
+            "YOUTUBE_COOKIES_BASE64 is set but this run used YOUTUBE_COOKIES_FILE "
+            "instead (base64 decode not used)"
+        )
+    else:
+        decode_succeeded = False
+        decode_note = (
+            "YOUTUBE_COOKIES_BASE64 is set but no usable cookie file after resolve "
+            "(decode/materialize failed — see earlier DIAG / exception logs)"
+        )
+
+    logger.info(
+        "DIAG cookie pre-yt-dlp: "
+        "YOUTUBE_COOKIES_BASE64_exists=%s "
+        "decode_succeeded=%s "
+        "decode_note=%s "
+        "cookie_path=%s "
+        "cookie_file_exists=%s "
+        "cookie_file_size_bytes=%s "
+        "ydl_opts_cookiefile_set=%s "
+        "ydl_opts_cookiefile=%s",
+        b64_exists,
+        decode_succeeded,
+        decode_note,
+        cookie_path,
+        file_exists,
+        size_bytes,
+        cookiefile_set,
+        cookiefile_value,
+    )
+
+    if cookiefile_set:
+        return
+
+    # Explain why cookiefile is missing from yt-dlp options (implementation unchanged).
+    if not b64_exists and not cookie_path:
+        why = (
+            "ydl_opts['cookiefile'] not set because no cookie source resolved "
+            "(YOUTUBE_COOKIES_BASE64 and YOUTUBE_COOKIES_FILE both unavailable "
+            "or empty)."
+        )
+    elif b64_exists and not cookie_path:
+        why = (
+            "ydl_opts['cookiefile'] not set because YOUTUBE_COOKIES_BASE64 is "
+            "configured but resolve_youtube_cookiefile() returned None "
+            "(decode/materialize failed — see earlier DIAG / exception logs)."
+        )
+    elif cookie_path and not file_exists:
+        why = (
+            f"ydl_opts['cookiefile'] not set because resolved path does not "
+            f"exist on disk: {cookie_path}"
+        )
+    else:
+        why = (
+            "ydl_opts['cookiefile'] not set for an unexpected reason — "
+            f"cookie_path={cookie_path!r} file_exists={file_exists} "
+            f"b64_exists={b64_exists}"
+        )
+    logger.warning("DIAG cookie pre-yt-dlp: %s", why)
+
+
 def download_video(url: str, output_dir: Path | str | None = None) -> str:
     """
     Download a video from ``url`` and return the local file path.
@@ -138,6 +252,12 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
             logger.info("No YouTube cookies configured")
     else:
         logger.info("No YouTube cookies configured")
+
+    # Temporary diagnostics immediately before yt-dlp (no cookie contents).
+    _log_pre_download_cookie_diagnostics(
+        cookie_path=cookie_path,
+        ydl_opts=ydl_opts,
+    )
 
     started = time.perf_counter()
     try:
