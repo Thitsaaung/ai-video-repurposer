@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -39,6 +40,10 @@ _CHROME_USER_AGENT = (
 _SLEEP_INTERVAL_REQUESTS_S = 1.0
 _SLEEP_INTERVAL_S = 1.0
 
+# Cookie-compatible YouTube Innertube clients (yt-dlp 2026.x authenticated defaults).
+# Do not use android/ios here — those clients do not support account cookies.
+_YOUTUBE_PLAYER_CLIENTS = ("tv_downgraded", "web_safari", "web")
+
 
 def _http_retry_sleep(attempt: int) -> float:
     """Linear backoff: 1, 3, 5, … seconds (CLI linear=1::2)."""
@@ -48,6 +53,22 @@ def _http_retry_sleep(attempt: int) -> float:
 def _fragment_retry_sleep(attempt: int) -> float:
     """Exponential backoff capped at 20s (CLI fragment:exp=1:20)."""
     return min(1.0 * (2.0 ** float(attempt)), 20.0)
+
+
+def _detect_js_runtimes() -> dict[str, dict]:
+    """
+    Enable yt-dlp JS runtimes that are present on PATH.
+
+    yt-dlp defaults to deno only; Railway typically installs Node via
+    ``RAILPACK_PACKAGES=node``, which must be enabled explicitly.
+    """
+    runtimes: dict[str, dict] = {}
+    # Prefer deno when present (yt-dlp default), always enable node when present.
+    if shutil.which("deno"):
+        runtimes["deno"] = {}
+    if shutil.which("node"):
+        runtimes["node"] = {}
+    return runtimes
 
 
 def _format_exception_chain(exc: BaseException) -> str:
@@ -232,6 +253,23 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
     dest = Path(output_dir) if output_dir is not None else DOWNLOADS_DIR
     dest.mkdir(parents=True, exist_ok=True)
 
+    js_runtimes = _detect_js_runtimes()
+    if js_runtimes:
+        logger.info(
+            "yt-dlp JS runtime detected: %s",
+            ", ".join(sorted(js_runtimes.keys())),
+        )
+    else:
+        logger.info(
+            "yt-dlp JS runtime detected: none "
+            "(install Node on Railway via RAILPACK_PACKAGES=node)",
+        )
+
+    logger.info(
+        "yt-dlp youtube player_client=%s",
+        ",".join(_YOUTUBE_PLAYER_CLIENTS),
+    )
+
     ydl_opts: dict = {
         "format": FORMAT_SELECTOR,
         "outtmpl": str(dest / "%(title)s [%(id)s].%(ext)s"),
@@ -253,7 +291,16 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
         },
         "sleep_interval_requests": _SLEEP_INTERVAL_REQUESTS_S,
         "sleep_interval": _SLEEP_INTERVAL_S,
+        # Cookie-compatible clients for cloud + browser-exported cookies.
+        "extractor_args": {
+            "youtube": {
+                "player_client": list(_YOUTUBE_PLAYER_CLIENTS),
+            },
+        },
     }
+    if js_runtimes:
+        # Enable Node when present — yt-dlp's default is deno-only.
+        ydl_opts["js_runtimes"] = js_runtimes
 
     cookie_path = resolve_youtube_cookiefile()
     if cookie_path:
