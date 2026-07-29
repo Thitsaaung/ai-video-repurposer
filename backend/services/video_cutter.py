@@ -44,6 +44,16 @@ _SUBTITLE_FORCE_STYLE = (
 )
 
 
+def _escape_force_style_for_ffmpeg(style: str) -> str:
+    """
+    Escape ASS force_style for an FFmpeg ``-vf`` filtergraph.
+
+    Commas separate filters in ``-vf``; without ``\\,`` FFmpeg truncates
+    ``force_style`` at the first comma and later properties are ignored.
+    """
+    return style.replace("\\", "\\\\").replace(":", "\\:").replace(",", "\\,")
+
+
 def _probe_video_duration_seconds(video_path: Path) -> float | None:
     """Return media duration via ffprobe, or None if unavailable."""
     cmd = [
@@ -253,9 +263,14 @@ def cut_clip(
                 "relative_srt_path must be relative (e.g. 'temp.srt'), "
                 f"got absolute: {relative_srt_path}"
             )
+        force_style = _escape_force_style_for_ffmpeg(_SUBTITLE_FORCE_STYLE)
         video_filter = (
             f"crop=ih*9/16:ih,"
-            f"subtitles={srt_for_filter}:force_style='{_SUBTITLE_FORCE_STYLE}'"
+            f"subtitles={srt_for_filter}:force_style={force_style}"
+        )
+        logger.debug(
+            "FFmpeg subtitle filter (escaped force_style): %s",
+            video_filter,
         )
     else:
         video_filter = "crop=ih*9/16:ih"
