@@ -24,18 +24,18 @@ DOWNLOADS_DIR = PROJECT_ROOT / "downloads"
 # rely on the runtime default so Windows/Railway both render without a
 # missing-font failure.
 #
-# Safe-area notes (Sprint 5.5):
-# - MarginV is distance from the bottom for Alignment=2. Lower than 90 moves
-#   captions down; keep enough gap above typical player / Shorts UI controls.
-# - Slightly smaller FontSize + modest side margins prefer ~2-line wraps over
-#   tall 3–4 line stacks (without changing SRT cue text or timing).
+# Safe-area notes:
+# - MarginV is distance from the bottom for Alignment=2; keep captions in the
+#   lower safe area above typical Shorts / player chrome.
+# - FontSize reduced ~29% from 24 → 17 so the frame leads; side margins keep
+#   wraps toward ≤3 lines without changing SRT cue text or timing.
 _SUBTITLE_FORCE_STYLE = (
-    "FontSize=24,"
+    "FontSize=17,"
     "Bold=1,"
     "PrimaryColour=&H00FFFFFF,"
     "OutlineColour=&H00000000,"
     "BorderStyle=1,"
-    "Outline=4,"
+    "Outline=3,"
     "Shadow=1,"
     "Alignment=2,"
     "MarginL=18,"
