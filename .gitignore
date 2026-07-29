@@ -3,59 +3,35 @@ venv/
 .venv/
 env/
 
-# Secrets
+# Secrets — env files
 .env
 .env.*
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-
-# Virtual environment
-venv/
-.env
-
-# VS Code
-.vscode/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Generated files
-downloads/
-transcripts/
-output_clips/
-
-# Python build files
-build/
-dist/
-*.egg-info/
-
-# Cache
-.pytest_cache/
-.mypy_cache/
-
-# Secrets
 .env.local
 .env.production
 !.env.example
 !frontend/.env.example
 
+# Secrets — YouTube / Netscape cookie credentials (never commit real cookies)
+# Matches cookies.txt, extension_cookies.txt, *cookies*.txt, yt_cookies_*.txt, etc.
+*cookies*.txt
+!*cookies.example.txt
+!**/*cookies.example.txt
+yt_cookies_*.txt
+**/yt_cookies_*.txt
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
+*.so
 *.egg-info/
 .eggs/
 dist/
 build/
+
+# Cache / coverage
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

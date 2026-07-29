@@ -83,6 +83,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - Optional Node/JS runtime still relevant for some yt-dlp YouTube challenges
 - Repo / product naming mix (`ai-video-repurposer` vs `T-Clipper`) in places
 - Legacy docs may still say “AI Video Repurposer” without TOS cross-links
+- Cookie files are gitignored (`*cookies*.txt`); env-only loading unchanged — see `docs/cookies_secret_management.md`
 
 ---
 
@@ -159,7 +160,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 ## Current Risks
 
 1. **YouTube extractor / bot policy changes** break downloads without warning
-2. **Cookie leakage** if Netscape cookies are committed or logged
+2. **Cookie leakage** if Netscape cookies are committed or logged (mitigated: `*cookies*.txt` gitignored; rotate if ever leaked)
 3. **API cost spikes** (Whisper + LLM) on long or frequent jobs
 4. **Ephemeral jobs** confuse users after redeploys
 5. **Scope creep** into vision/gaming/architecture rewrites before MVP reliability
@@ -169,7 +170,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 ## Last Updated
 
-**2026-07-30**
+**2026-07-30** (cookie secret gitignore + `docs/cookies_secret_management.md`)
 
 ---
 

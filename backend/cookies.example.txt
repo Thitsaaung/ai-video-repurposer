@@ -1,0 +1,22 @@
+# Netscape HTTP Cookie File
+# https://curl.se/docs/http-cookies.html
+#
+# EXAMPLE ONLY — do not put real YouTube session cookies in this file.
+#
+# Local setup:
+#   1. Copy this file to backend/cookies.txt (gitignored).
+#   2. Replace the contents with a real Netscape export from a dedicated Google account.
+#   3. In backend/.env (or repo-root .env) set:
+#        YOUTUBE_COOKIES_FILE=cookies.txt
+#      (path is relative to process cwd; from backend/ that is backend/cookies.txt)
+#      Or use an absolute path, e.g.:
+#        YOUTUBE_COOKIES_FILE=C:\Users\you\Desktop\ai-video-repurposer\backend\cookies.txt
+#
+# Railway:
+#   Do NOT upload cookies.txt to the repo. Base64-encode your local cookies.txt and set
+#   the backend service variable YOUTUBE_COOKIES_BASE64 (see README.md).
+#
+# Real exports look like tab-separated rows, for example:
+# .youtube.com	TRUE	/	TRUE	1999999999	NAME	value
+#
+# See README.md → YouTube cookies, and docs/cookies_secret_management.md
