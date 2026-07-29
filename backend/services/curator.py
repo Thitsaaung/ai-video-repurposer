@@ -454,6 +454,17 @@ def _call_openai(system: str, user: str) -> str:
             response_format=CurationResponse,
         )
         message = completion.choices[0].message
+        # Temporary diagnostic — complete raw content, never truncated.
+        # Must run before any parsed/fallback return so we see what GPT returned.
+        logger.info(
+            "DIAG OpenAI raw message.content (complete, untruncated) "
+            "refusal=%r parsed_is_none=%s:\n%s",
+            getattr(message, "refusal", None),
+            message.parsed is None,
+            message.content
+            if message.content is not None
+            else "<message.content is None>",
+        )
         if message.parsed is not None:
             return message.parsed.model_dump_json()
         return message.content or ""
@@ -511,6 +522,13 @@ def _invoke_llm(system: str, user: str) -> CurationResponse:
         _call_anthropic(system, user)
         if provider == "anthropic"
         else _call_openai(system, user)
+    )
+
+    # Temporary diagnostic — exact string about to enter JSON extract + Pydantic.
+    logger.info(
+        "DIAG LLM raw text before CurationResponse.model_validate "
+        "(complete, untruncated):\n%s",
+        raw_text if raw_text is not None else "<raw_text is None>",
     )
 
     try:
