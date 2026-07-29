@@ -1,14 +1,16 @@
-"""Media download routes — serve clips from output_clips only."""
+"""Media download/preview routes — serve clips from output_clips only."""
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
+from app.core.auth import AuthenticatedUser
 from app.core.config import get_settings
+from app.deps.auth import require_authenticated_user
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +47,46 @@ def _resolve_clip_in_output_dir(filename: str) -> Path:
     return candidate
 
 
+@router.get("/clips/{filename}")
+async def preview_clip(
+    filename: str,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+) -> FileResponse:
+    """
+    Stream a clip for in-browser preview.
+
+    Requires Bearer JWT (or ``access_token`` query for ``<video src>``).
+    Replaces the previous unauthenticated StaticFiles mount.
+    """
+    clip_path = _resolve_clip_in_output_dir(filename)
+    logger.info(
+        "Preview clip filename=%s user_id=%s",
+        clip_path.name,
+        user.user_id,
+    )
+    return FileResponse(
+        path=clip_path,
+        media_type="video/mp4",
+        filename=clip_path.name,
+    )
+
+
 @router.get("/download/{filename}")
-async def download_clip(filename: str) -> FileResponse:
+async def download_clip(
+    filename: str,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+) -> FileResponse:
     """
     Return a clip as an attachment so the browser downloads it.
 
     Only files that exist under the project ``output_clips/`` directory.
     """
     clip_path = _resolve_clip_in_output_dir(filename)
-    logger.info("Download clip filename=%s", clip_path.name)
+    logger.info(
+        "Download clip filename=%s user_id=%s",
+        clip_path.name,
+        user.user_id,
+    )
     return FileResponse(
         path=clip_path,
         media_type="video/mp4",

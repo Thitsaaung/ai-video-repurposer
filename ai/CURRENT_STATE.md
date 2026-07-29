@@ -44,6 +44,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - [x] Subtitle Layout Engine (≤3 lines, phrase-aware SRT cues)
 - [x] Automatic storage cleanup / retention (downloads, temps, clips, expired jobs)
 - [x] Supabase configuration foundation (Phase 0 — env load/validate/startup fail-fast)
+- [x] JWT verification + protected API routes (Phase 1 — Bearer auth; no ownership/teams yet)
 
 ---
 
@@ -60,7 +61,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 | HTTP API | `backend/app/` | FastAPI |
 | Job store | In-memory (process-local) | Not durable across restarts; expired terminal jobs purged by cleanup |
 | Storage cleanup | `app/services/storage_cleanup.py` | Startup + interval; configurable retention env vars |
-| Supabase config | `app/core/supabase_config.py` | Phase 0 foundation; no JWT/middleware yet (DEC-020) |
+| Supabase config | `app/core/supabase_config.py` | Phase 0 foundation (DEC-020) |
+| Auth (JWT) | `app/core/auth.py`, `app/deps/auth.py` | Phase 1: verify Supabase JWT; protect jobs/media |
 | Frontend | `frontend/` | Next.js 15 App Router |
 
 ---
@@ -81,7 +83,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 ## Known Technical Debt
 
 - In-memory job store (no Redis/DB-backed queue yet)
-- No authentication / multi-tenancy (Phase 0 config only; JWT gate is Phase 1)
+- Auth JWT gate shipped (Phase 1); no user profiles / job ownership / teams yet
+- Frontend login UI + attaching Bearer tokens not shipped yet (API returns 401 when auth enforced)
 - No durable clip library or object storage abstraction (local retention cleanup mitigates disk fill)
 - Whisper chunking for long videos not implemented
 - Optional Node/JS runtime still relevant for some yt-dlp YouTube challenges
@@ -108,7 +111,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - Vercel frontend deployment pairing
 - Cookie / download resilience for cloud environments
 - Subtitle preset bake-off review (Founder chooses A–E default)
-- Auth Phase 0 complete → next: Phase 1 (login + JWT + protected API)
+- Auth Phase 1 JWT gate complete → next: frontend login + attach tokens; then Phase 2 ownership
 
 ---
 
@@ -116,7 +119,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 1. Apply chosen subtitle style preset after Founder decision
 2. Stable Closed Beta: frontend (Vercel) + backend (Railway) reliably process speech-heavy videos
-3. Auth Phase 1 (Supabase login + FastAPI JWT gate) per `docs/auth_implementation_plan.md`
+3. Auth Phase 2 (profiles + job ownership) per `docs/auth_implementation_plan.md`; frontend Supabase login UI
 4. Durable jobs / worker path when concurrency or restarts demand it
 5. Measurable AI quality loop (prompt evals on known source videos)
 
@@ -145,8 +148,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 - **Stack:** FastAPI + modular `services/` pipeline
 - **API:** Process video, job status, media/clips
-- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in; automatic storage cleanup with configurable retention; Supabase env config validation at startup (Phase 0)
-- **Gaps:** JWT middleware / protected routes (Phase 1), durable queue, multi-tenant isolation, long-video Whisper chunking; char budget not yet tied to FontSize preset
+- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in; automatic storage cleanup; Supabase JWT auth dependency on jobs/media (Phase 1)
+- **Gaps:** Frontend login / token attach; job ownership (Phase 2); durable queue; multi-tenant orgs; long-video Whisper chunking; char budget not yet tied to FontSize preset
 
 ---
 
@@ -176,7 +179,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 ## Last Updated
 
-**2026-07-30** (auth Phase 0 — Supabase configuration foundation)
+**2026-07-30** (auth Phase 1 — JWT verification + protected API)
 
 ---
 

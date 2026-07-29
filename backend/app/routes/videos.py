@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
+from app.core.auth import AuthenticatedUser
 from app.core.enums import JobStatus
 from app.core.paths import to_public_job
 from app.core.validation import assert_youtube_url, validate_job_id
+from app.deps.auth import require_authenticated_user
 from app.services import job_store
 from app.services.video_processor import process_video_job
 
@@ -49,6 +51,7 @@ class JobResponse(BaseModel):
 async def process_video(
     payload: ProcessVideoRequest,
     background_tasks: BackgroundTasks,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
 ) -> JobResponse:
     """
     Create a queued job, schedule real engine processing, return immediately.
@@ -56,15 +59,23 @@ async def process_video(
     url = str(payload.url)
     job = job_store.create_job(url)
     background_tasks.add_task(process_video_job, job["job_id"], job["url"])
-    logger.info("Enqueued job_id=%s for processing", job["job_id"])
+    logger.info(
+        "Enqueued job_id=%s user_id=%s for processing",
+        job["job_id"],
+        user.user_id,
+    )
     return JobResponse(**to_public_job(job))
 
 
 @router.get("/jobs/{job_id}", response_model=JobResponse)
-async def get_job(job_id: str) -> JobResponse:
+async def get_job(
+    job_id: str,
+    user: AuthenticatedUser = Depends(require_authenticated_user),
+) -> JobResponse:
     """Fetch a previously created job by id."""
     validated_id = validate_job_id(job_id)
     job = job_store.get_job(validated_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
+    logger.debug("Job fetch job_id=%s user_id=%s", validated_id, user.user_id)
     return JobResponse(**to_public_job(job))

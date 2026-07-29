@@ -9,7 +9,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import get_settings
@@ -37,12 +36,6 @@ app.add_middleware(
 
 app.include_router(videos_router)
 app.include_router(media_router)
-
-app.mount(
-    "/media/clips",
-    StaticFiles(directory=str(settings.output_clips_dir)),
-    name="clips",
-)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -112,11 +105,17 @@ async def on_startup() -> None:
         settings.output_clips_dir,
         settings.storage_cleanup_enabled,
     )
-    # Phase 0: validate Supabase env foundation (no JWT/middleware yet).
+    # Phase 0–1: validate Supabase env; JWT enforced on protected routes when configured.
     # Production fails fast on missing/invalid config; development may omit.
+    from app.core.auth import auth_is_enforced
     from app.core.supabase_config import assert_supabase_config_at_startup
 
     assert_supabase_config_at_startup(settings)
+    logger.info(
+        "Auth enforcement active=%s (AUTH_DISABLED=%s)",
+        auth_is_enforced(settings),
+        settings.auth_disabled,
+    )
 
     # Best-effort disk hygiene; never raises into ASGI startup.
     try:

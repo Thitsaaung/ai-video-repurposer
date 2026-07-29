@@ -51,6 +51,15 @@ class Settings(BaseSettings):
         ],
     )
 
+    # Auth Phase 1 — local/CLI smoke only. Ignored when APP_ENV is production.
+    auth_disabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "AUTH_DISABLED",
+            "auth_disabled",
+        ),
+    )
+
     # YouTube / yt-dlp cookie auth (Phase 1). Never log these values.
     youtube_cookies_file: str | None = Field(
         default=None,

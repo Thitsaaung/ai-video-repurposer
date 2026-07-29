@@ -57,7 +57,7 @@ async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-/** Public URL for a generated clip served by FastAPI StaticFiles (preview). */
+/** Public URL for a generated clip (authenticated ``/media/clips`` route). */
 export function getClipMediaUrl(filePathOrName: string): string {
   const filename = clipBasename(filePathOrName);
   return `${API_BASE}/media/clips/${encodeURIComponent(filename)}`;
