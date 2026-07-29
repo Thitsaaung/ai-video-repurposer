@@ -104,12 +104,20 @@ async def health() -> dict[str, str]:
 @app.on_event("startup")
 async def on_startup() -> None:
     logger.info(
-        "Starting %s — cors_origins=%s output_clips=%s cleanup_enabled=%s",
+        "Starting %s — app_env=%s cors_origins=%s output_clips=%s "
+        "cleanup_enabled=%s",
         settings.app_name,
+        settings.app_env,
         settings.cors_origins,
         settings.output_clips_dir,
         settings.storage_cleanup_enabled,
     )
+    # Phase 0: validate Supabase env foundation (no JWT/middleware yet).
+    # Production fails fast on missing/invalid config; development may omit.
+    from app.core.supabase_config import assert_supabase_config_at_startup
+
+    assert_supabase_config_at_startup(settings)
+
     # Best-effort disk hygiene; never raises into ASGI startup.
     try:
         from app.services.storage_cleanup import run_startup_cleanup

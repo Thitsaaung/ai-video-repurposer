@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "AI Video Repurposer API"
+    # development | production | test (also accepts prod/dev/local/staging)
+    app_env: str = Field(
+        default="development",
+        validation_alias=AliasChoices(
+            "APP_ENV",
+            "ENVIRONMENT",
+            "app_env",
+        ),
+    )
     log_level: str = "INFO"
     cors_origins: list[str] = Field(
         default_factory=lambda: [
@@ -143,6 +152,11 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_log_level(cls, value: str) -> str:
         return value.upper()
+
+    @field_validator("app_env")
+    @classmethod
+    def _normalize_app_env(cls, value: str) -> str:
+        return (value or "development").strip().lower() or "development"
 
     @field_validator("youtube_cookies_file", "youtube_cookies_base64", mode="before")
     @classmethod

@@ -43,6 +43,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - [x] Next.js frontend (submit URL, job status, clip preview/download)
 - [x] Subtitle Layout Engine (≤3 lines, phrase-aware SRT cues)
 - [x] Automatic storage cleanup / retention (downloads, temps, clips, expired jobs)
+- [x] Supabase configuration foundation (Phase 0 — env load/validate/startup fail-fast)
 
 ---
 
@@ -59,6 +60,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 | HTTP API | `backend/app/` | FastAPI |
 | Job store | In-memory (process-local) | Not durable across restarts; expired terminal jobs purged by cleanup |
 | Storage cleanup | `app/services/storage_cleanup.py` | Startup + interval; configurable retention env vars |
+| Supabase config | `app/core/supabase_config.py` | Phase 0 foundation; no JWT/middleware yet (DEC-020) |
 | Frontend | `frontend/` | Next.js 15 App Router |
 
 ---
@@ -79,7 +81,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 ## Known Technical Debt
 
 - In-memory job store (no Redis/DB-backed queue yet)
-- No authentication / multi-tenancy
+- No authentication / multi-tenancy (Phase 0 config only; JWT gate is Phase 1)
 - No durable clip library or object storage abstraction (local retention cleanup mitigates disk fill)
 - Whisper chunking for long videos not implemented
 - Optional Node/JS runtime still relevant for some yt-dlp YouTube challenges
@@ -106,6 +108,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 - Vercel frontend deployment pairing
 - Cookie / download resilience for cloud environments
 - Subtitle preset bake-off review (Founder chooses A–E default)
+- Auth Phase 0 complete → next: Phase 1 (login + JWT + protected API)
 
 ---
 
@@ -113,7 +116,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 1. Apply chosen subtitle style preset after Founder decision
 2. Stable Closed Beta: frontend (Vercel) + backend (Railway) reliably process speech-heavy videos
-3. Auth + persistent storage (Supabase or approved alternative)
+3. Auth Phase 1 (Supabase login + FastAPI JWT gate) per `docs/auth_implementation_plan.md`
 4. Durable jobs / worker path when concurrency or restarts demand it
 5. Measurable AI quality loop (prompt evals on known source videos)
 
@@ -142,8 +145,8 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 - **Stack:** FastAPI + modular `services/` pipeline
 - **API:** Process video, job status, media/clips
-- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in; automatic storage cleanup with configurable retention
-- **Gaps:** Durable queue, auth, multi-tenant isolation, long-video Whisper chunking; char budget not yet tied to FontSize preset
+- **Capabilities:** Background job processing via FastAPI `BackgroundTasks`; intelligent subtitle layout before SRT burn-in; automatic storage cleanup with configurable retention; Supabase env config validation at startup (Phase 0)
+- **Gaps:** JWT middleware / protected routes (Phase 1), durable queue, multi-tenant isolation, long-video Whisper chunking; char budget not yet tied to FontSize preset
 
 ---
 
@@ -151,7 +154,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 | Area | Status |
 |------|--------|
-| Secrets via env (OpenAI, cookies, CORS) | In use |
+| Secrets via env (OpenAI, cookies, CORS, Supabase) | In use (Supabase required when `APP_ENV=production`) |
 | FFmpeg on Railway | Required (`RAILPACK_DEPLOY_APT_PACKAGES=ffmpeg`) |
 | Object storage / CDN for clips | Not yet (local retention cleanup enabled — DEC-019) |
 | Observability / alerting | Minimal (logs) |
@@ -173,7 +176,7 @@ Core pipeline + FastAPI + Next.js UI exist. Auth, durable DB, and full SaaS pack
 
 ## Last Updated
 
-**2026-07-30** (storage cleanup / retention — DEC-019)
+**2026-07-30** (auth Phase 0 — Supabase configuration foundation)
 
 ---
 
