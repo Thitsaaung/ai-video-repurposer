@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -69,6 +70,107 @@ def _detect_js_runtimes() -> dict[str, dict]:
     if shutil.which("node"):
         runtimes["node"] = {}
     return runtimes
+
+
+class _YtDlpAuthDiagLogger:
+    """
+    Temporary yt-dlp logger — captures auth/client debug lines only.
+
+    Never logs cookie values or secrets. Remove after debugging.
+    """
+
+    _INTEREST_SUBSTR = (
+        "account cookie",
+        "youtube account",
+        "no longer valid",
+        "player api json",
+        "client config",
+        "player client",
+        "sign in to confirm",
+        "login_required",
+        "login required",
+        "cookies are",
+    )
+
+    _SECRET_MARKERS = (
+        "\t",
+        "SID=",
+        "HSID=",
+        "SSID=",
+        "APISID=",
+        "SAPISID=",
+        "__Secure-",
+        "LOGIN_INFO",
+        "cookie: ",
+        "Cookie: ",
+    )
+
+    def __init__(self) -> None:
+        self.account_cookies_found = False
+        self.account_cookies_invalid = False
+        self.observed_clients: list[str] = []
+
+    def _looks_secret(self, message: str) -> bool:
+        if any(marker in message for marker in self._SECRET_MARKERS):
+            return True
+        # Netscape cookie lines / huge dumps
+        if "cookie" in message.lower() and len(message) > 400:
+            return True
+        return False
+
+    def _interesting(self, message: str) -> bool:
+        low = message.lower()
+        return any(token in low for token in self._INTEREST_SUBSTR)
+
+    def _track(self, message: str) -> None:
+        low = message.lower()
+        if "found youtube account cookies" in low:
+            self.account_cookies_found = True
+        if "no longer valid" in low and "cookie" in low:
+            self.account_cookies_invalid = True
+
+        for pattern in (
+            r"Downloading (.+?) player API JSON",
+            r"Downloading (.+?) client config",
+        ):
+            match = re.search(pattern, message, flags=re.IGNORECASE)
+            if not match:
+                continue
+            client = match.group(1).strip().replace(" ", "_")
+            if client and client not in self.observed_clients:
+                self.observed_clients.append(client)
+
+    def _emit(self, message: object) -> None:
+        text = str(message)
+        if self._looks_secret(text):
+            logger.info("DIAG yt-dlp: [message redacted — possible secret content]")
+            return
+        self._track(text)
+        if self._interesting(text):
+            logger.info("DIAG yt-dlp: %s", text)
+
+    def debug(self, msg: object) -> None:
+        self._emit(msg)
+
+    def info(self, msg: object) -> None:
+        self._emit(msg)
+
+    def warning(self, msg: object) -> None:
+        self._emit(msg)
+
+    def error(self, msg: object) -> None:
+        self._emit(msg)
+
+    def summary_log(self, *, configured_clients: tuple[str, ...]) -> None:
+        logger.info(
+            "DIAG yt-dlp auth summary: account_cookies_found=%s "
+            "account_cookies_invalid=%s configured_player_client=%s "
+            "observed_clients=%s",
+            self.account_cookies_found,
+            self.account_cookies_invalid,
+            ",".join(configured_clients),
+            ",".join(self.observed_clients) if self.observed_clients else "none",
+        )
 
 
 def _format_exception_chain(exc: BaseException) -> str:
@@ -277,6 +379,8 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
         "noplaylist": True,
         "quiet": False,
         "no_warnings": False,
+        # Temporary: enable yt-dlp debug so account-cookie / client lines surface.
+        "verbose": True,
         # Sprint #6A — finite yt-dlp-native resilience (no outer job retries).
         "socket_timeout": _DOWNLOAD_SOCKET_TIMEOUT,
         "retries": _DOWNLOAD_RETRIES,
@@ -298,6 +402,10 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
             },
         },
     }
+    # Temporary auth/client diagnostics (no cookie values). Remove after debugging.
+    auth_diag = _YtDlpAuthDiagLogger()
+    ydl_opts["logger"] = auth_diag
+
     if js_runtimes:
         # Enable Node when present — yt-dlp's default is deno-only.
         ydl_opts["js_runtimes"] = js_runtimes
@@ -323,6 +431,10 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
     _log_pre_download_cookie_diagnostics(
         cookie_path=cookie_path,
         ydl_opts=ydl_opts,
+    )
+    logger.info(
+        "DIAG yt-dlp: configured extractor player_client=%s",
+        ",".join(_YOUTUBE_PLAYER_CLIENTS),
     )
 
     started = time.perf_counter()
@@ -366,6 +478,8 @@ def download_video(url: str, output_dir: Path | str | None = None) -> str:
             kind="unexpected",
         )
         raise
+    finally:
+        auth_diag.summary_log(configured_clients=_YOUTUBE_PLAYER_CLIENTS)
 
 
 if __name__ == "__main__":
